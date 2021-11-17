@@ -174,7 +174,7 @@ macro_rules! decl_rpc_param_type {
     ($method:literal, $name:ident) => {
         paste::paste! {
             #[doc = "RPC Params for `" $method]
-            #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+            #[derive(Debug, Copy, Clone, Serialize)]
             #[serde(into = "Vec<()>", from = "Vec<()>")]
             pub struct [<$name Params>] ();
 

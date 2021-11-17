@@ -7,6 +7,12 @@ pub enum RpcError {
     #[error("{0}")]
     SerdeJson(#[from] serde_json::Error),
     /// ErrorResponse
-    #[error("{0:?}")]
+    #[error("{0}")]
     ErrorResponse(JsonRpcError),
+}
+
+impl From<JsonRpcError> for RpcError {
+    fn from(e: JsonRpcError) -> Self {
+        RpcError::ErrorResponse(e)
+    }
 }

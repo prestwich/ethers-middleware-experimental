@@ -9,6 +9,7 @@ edition = "2018"
 [dependencies]
 async-trait = "0.1.51"
 ethers = { git = "https://github.com/gakonst/ethers-rs", branch = "master" }
+paste = "1.0.6"
 serde = "1.0.130"
 serde_json = "1.0.70"
 thiserror = "1.0.30"

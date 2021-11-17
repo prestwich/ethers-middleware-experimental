@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use ethers::prelude::U64;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::Value;
-use std::fmt::Debug;
+use std::fmt::{self, Debug};
 
 use crate::{error::RpcError, provider::RpcConnection};
 
@@ -22,6 +22,16 @@ pub struct JsonRpcError {
     pub code: i64,
     pub message: String,
     pub data: Option<Value>,
+}
+
+impl fmt::Display for JsonRpcError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "(code: {}, message: {}, data: {:?})",
+            self.code, self.message, self.data
+        )
+    }
 }
 
 #[derive(Deserialize, Debug, Clone)]
