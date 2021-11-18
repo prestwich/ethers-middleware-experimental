@@ -19,7 +19,7 @@ macro_rules! decl_rpc_param_type {
     ($method:literal, $name:ident, params: [ $($param:ty),* ] ) => {
         paste::paste! {
             #[doc = "RPC Params for `" $method "`"]
-            #[derive(Debug, serde::Serialize, serde::Deserialize)]
+            #[derive(Debug, serde::Serialize)]
 
             pub struct [<$name Params>]  (
                 $($param),*
