@@ -242,8 +242,6 @@ impl_rpc!(
     response: Vec<Trace>,
 );
 
-// TODO(James): eth_subscribe manual impls
-
 impl_rpc!("eth_unsubscribe", Unsubscribe, param: U256, response: bool,);
 
 impl_rpc!(
@@ -252,3 +250,5 @@ impl_rpc!(
     params: [ U256, BlockNumber, Vec<f64> ],
     response: FeeHistory,
 );
+
+// TODO(James): eth_subscribe manual impls

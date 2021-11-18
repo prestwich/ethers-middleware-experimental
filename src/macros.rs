@@ -48,17 +48,19 @@ macro_rules! decl_rpc_param_type {
     };
 }
 
-macro_rules! decl_rpc_response_type {
-    ($method:literal, $name:ident, { $( $resp:ident: $resp_ty:ty, )* }) => {
-        paste::paste! {
-            #[doc = "RPC Response for `" $method "`"]
-            #[derive(Debug, serde::Deserialize)]
-            pub struct [<$name Response>]  {
-                $($resp: $resp_ty,)*
-            }
-        }
-    };
-}
+// // Currently unused, as we never need to in-line declare a response type.
+// // All responses have existing types in ethers as far as I can tell
+// macro_rules! decl_rpc_response_type {
+//     ($method:literal, $name:ident, { $( $resp:ident: $resp_ty:ty, )* }) => {
+//         paste::paste! {
+//             #[doc = "RPC Response for `" $method "`"]
+//             #[derive(Debug, serde::Deserialize)]
+//             pub struct [<$name Response>]  {
+//                 $($resp: $resp_ty,)*
+//             }
+//         }
+//     };
+// }
 
 macro_rules! impl_rpc {
     ($method:literal, $name:ident, response: $resp:ty $(,)?) => {
