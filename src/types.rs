@@ -1,5 +1,4 @@
 use async_trait::async_trait;
-use ethers::prelude::U64;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::Value;
 use std::fmt::{self, Debug};
@@ -99,13 +98,4 @@ pub trait RequestParams: Serialize + Send + Sync + Debug {
             .await?
             .deserialize()
     }
-}
-
-#[derive(Serialize, Debug)]
-pub struct GetBlockHeightParams;
-
-impl RequestParams for GetBlockHeightParams {
-    const METHOD: &'static str = "eth_blockNumber";
-
-    type Response = U64;
 }

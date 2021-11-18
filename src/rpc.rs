@@ -6,7 +6,7 @@ use serde_json::Value;
 
 impl_rpc!("web3_clientVersion", ClientVersion, response: String);
 
-impl_rpc!("eth_blockNumber", BlockNumber, response: U256);
+impl_rpc!("eth_blockNumber", BlockNumber, response: U64);
 
 impl_rpc!(
     "eth_getBlockByHash",

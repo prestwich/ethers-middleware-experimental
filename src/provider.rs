@@ -6,7 +6,7 @@ use ethers::prelude::U64;
 use crate::{
     error::RpcError,
     middleware::Middleware,
-    types::{GetBlockHeightParams, RawRequest, RawResponse, RequestParams},
+    types::{RawRequest, RawResponse, RequestParams},
 };
 
 #[async_trait]
@@ -40,6 +40,22 @@ where
     }
 
     async fn get_block_number(&self) -> Result<U64, RpcError> {
-        GetBlockHeightParams.send_via(self).await
+        crate::rpc::BlockNumberParams.send_via(self).await
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use core::panic;
+
+    use super::*;
+    use crate::transports::http::Http;
+
+    #[tokio::test]
+    async fn it_makes_a_req() {
+        let provider: Http = "https://mainnet.infura.io/v3/5cfdec76313b457cb696ff1b89cee7ee"
+            .parse()
+            .unwrap();
+        dbg!(provider.get_block_number().await.unwrap());
     }
 }
