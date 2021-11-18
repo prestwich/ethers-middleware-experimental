@@ -22,7 +22,7 @@ macro_rules! decl_rpc_param_type {
             #[derive(Debug, serde::Serialize)]
 
             pub struct [<$name Params>]  (
-                $($param),*
+                $(pub(crate) $param),*
             );
         }
     };
@@ -31,7 +31,7 @@ macro_rules! decl_rpc_param_type {
         paste::paste! {
             #[doc = "RPC Params for `" $method "`"]
             #[derive(Debug, Clone)]
-            pub struct [<$name Params>] ( $param );
+            pub struct [<$name Params>] ( pub(crate) $param );
 
             impl From<$param> for [<$name Params>] {
                 fn from(p: $param) -> Self {
@@ -43,6 +43,25 @@ macro_rules! decl_rpc_param_type {
                 fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
                     [&self.0].serialize(serializer)
                 }
+            }
+        }
+    };
+}
+
+macro_rules! impl_dispatch_method {
+    ($name:ident, $resp:ty) => {
+        paste::paste!{
+            pub(crate) async fn [<dispatch_ $name:snake>](provider: &dyn crate::provider::RpcConnection) -> Result<Response, crate::error::RpcError> {
+                use crate::types::RequestParams;
+                [<$name Params>].send_via(provider).await
+            }
+        }
+    };
+    ($name:ident, $params:ty, $resp:ty) => {
+        paste::paste!{
+            pub(crate) async fn [<dispatch_ $name:snake>](provider: &dyn crate::provider::RpcConnection, params: &Params) -> Result<Response,crate::error::RpcError> {
+                use crate::types::RequestParams;
+                params.send_via(provider).await
             }
         }
     };
@@ -65,46 +84,103 @@ macro_rules! decl_rpc_param_type {
 macro_rules! impl_rpc {
     ($method:literal, $name:ident, response: $resp:ty $(,)?) => {
         paste::paste! {
-            decl_rpc_param_type!($method, $name);
-            impl_rpc_params!($method, [<$name Params>], $resp);
+            #[allow(unused_imports)]
+            mod [<inner_ $method:snake>] {
+                use super::*;
+                decl_rpc_param_type!($method, $name);
+
+                type Params = [<$name Params>];
+                type Response = $resp;
+
+                impl_rpc_params!($method, Params, Response);
+                impl_dispatch_method!($name, Response);
+            }
+            pub use [<inner_ $method:snake>]::*;
         }
     };
 
     ($method:literal, $name:ident, response: { $( $resp:ident: $resp_ty:ty, )* $(,)?}) => {
         paste::paste! {
-            decl_rpc_param_type!($method, $name);
-            decl_rpc_response_type!($method, $name, { $( $resp: $resp_ty, )* });
-            impl_rpc_params!($method, [<$name Params>], [<$name Response>]);
+            mod [<inner_ $method:snake>] {
+                use super::*;
+
+                decl_rpc_param_type!($method, $name);
+                decl_rpc_response_type!($method, $name, { $( $resp: $resp_ty, )* });
+
+                type Params = [<$name Params>];
+                type Response = [<$name Response>];
+
+                impl_rpc_params!($method, Params, Response);
+                impl_dispatch_method!($name, Response);
+            }
+            pub use [<inner_ $method:snake>]::*;
         }
     };
 
     ($method:literal, $name:ident, params: [ $($param:ty),* ], response: $resp:ty $(,)?) => {
         paste::paste! {
-            decl_rpc_param_type!($method, $name, params: [ $($param),* ]);
-            impl_rpc_params!($method, [<$name Params>], $resp);
+            mod [<inner_ $method:snake>] {
+                use super::*;
+                decl_rpc_param_type!($method, $name, params: [ $($param),* ]);
+
+                type Params = [<$name Params>];
+                type Response = $resp;
+
+                impl_rpc_params!($method, Params, Response);
+                impl_dispatch_method!($name, Params, Response);
+            }
+            pub use [<inner_ $method:snake>]::*;
         }
     };
 
     ($method:literal, $name:ident, params: [ $($param:ty),* ], response: { $( $resp:ident: $resp_ty:ty, )* } $(,)?) => {
         paste::paste! {
-            decl_rpc_param_type!($method, $name, params: [ $($param),* ]);
-            decl_rpc_response_type!($method, $name, { $( $resp: $resp_ty, )* } );
-            impl_rpc_params!($method, [<$name Params>], [<$name Response>]);
+            mod [<inner_ $method:snake>] {
+                use super::*;
+                decl_rpc_param_type!($method, $name, params: [ $($param),* ]);
+                decl_rpc_response_type!($method, $name, { $( $resp: $resp_ty, )* } );
+
+                type Params = [<$name Params>];
+                type Response = [<$name Response>];
+
+                impl_rpc_params!($method, Params, Response);
+                impl_dispatch_method!($name, Params, Response);
+            }
+            pub use [<inner_ $method:snake>]::*;
         }
     };
 
     ($method:literal, $name:ident, param: $param:ty, response: { $( $resp:ident: $resp_ty:ty, )* } $(,)?) => {
         paste::paste! {
-            decl_rpc_param_type!($method, $name, param: $param);
-            decl_rpc_response_type!($method, $name, { $( $resp: $resp_ty, )* });
-            impl_rpc_params!($method, [<$name Params>], [<$name Response>]);
+            mod [<inner_ $method:snake>] {
+                use super::*;
+
+                decl_rpc_param_type!($method, $name, param: $param);
+                decl_rpc_response_type!($method, $name, { $( $resp: $resp_ty, )* });
+
+                type Params = [<$name Params>];
+                type Response = [<$name Response>];
+
+                impl_rpc_params!($method, Params, Response);
+                impl_dispatch_method!($name, Params, Response);
+            }
+            pub use [<inner_ $method:snake>]::*;
         }
     };
 
     ($method:literal, $name:ident, param: $param:ty, response: $resp:ty $(,)?) => {
         paste::paste! {
-            decl_rpc_param_type!($method, $name, param: $param);
-            impl_rpc_params!($method, [<$name Params>], $resp);
+            mod [<inner_ $method:snake>] {
+                use super::*;
+                decl_rpc_param_type!($method, $name, param: $param);
+
+                type Params = [<$name Params>];
+                type Response = $resp;
+
+                impl_rpc_params!($method, Params, Response);
+                impl_dispatch_method!($name, Params, Response);
+            }
+            pub use [<inner_ $method:snake>]::*;
         }
     };
 }

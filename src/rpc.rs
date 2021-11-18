@@ -10,14 +10,14 @@ impl_rpc!("eth_blockNumber", BlockNumber, response: U64);
 
 impl_rpc!(
     "eth_getBlockByHash",
-    BlockByHash,
+    GetBlockByHash,
     params: [ H256, bool ],
     response: Option<Value>,
 );
 
 impl_rpc!(
     "eth_getBlockByNumber",
-    BlockByNumber,
+    GetBlockByNumber,
     params: [ BlockNumber, bool ],
     response: Option<Value>,
 );
@@ -65,8 +65,8 @@ impl_rpc!(
 );
 
 impl_rpc!(
-    "eth_getBlockReceipt",
-    GetBlockReceipt,
+    "eth_getBlockReceipts",
+    GetBlockReceipts,
     param: BlockNumber,
     response: Vec<TransactionReceipt>,
 );
