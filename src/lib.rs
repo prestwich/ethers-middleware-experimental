@@ -8,3 +8,5 @@ pub mod provider;
 pub mod rpc;
 pub mod transports;
 pub mod types;
+
+pub mod pending_transaction;

@@ -10,6 +10,7 @@ use async_trait::async_trait;
 use crate::{
     error::RpcError,
     middleware::{GethMiddleware, Middleware, ParityMiddleware},
+    pending_transaction::PendingTransaction,
     rpc,
     types::{RawRequest, RawResponse, RequestParams},
 };
@@ -222,30 +223,23 @@ where
             .await
     }
 
-    // /// Sends the transaction to the entire Ethereum network and returns the transaction's hash
-    // /// This will consume gas from the account that signed the transaction.
-    // async fn send_transaction<T: Into<TypedTransaction> + Send + Sync>(
-    //     &self,
-    //     tx: T,
-    //     block: Option<BlockNumber>,
-    // ) -> Result<PendingTransaction<'_, Self::Provider>, RpcError> {
-    //     self.inner()
-    //         .send_transaction(tx, block)
-    //         .await
-    //
-    // }
+    async fn send_transaction(
+        &self,
+        tx: &TypedTransaction,
+        block: Option<BlockNumber>,
+    ) -> Result<PendingTransaction<'_>, RpcError> {
+        let _block = block.unwrap_or_else(|| BlockNumber::Latest);
 
-    // /// Send the raw RLP encoded transaction to the entire Ethereum network and returns the
-    // /// transaction's hash This will consume gas from the account that signed the transaction.
-    // async fn send_raw_transaction<'a>(
-    //     &'a self,
-    //     tx: Bytes,
-    // ) -> Result<PendingTransaction<'a, Self::Provider>, RpcError> {
-    //     self.inner()
-    //         .send_raw_transaction(tx)
-    //         .await
-    //
-    // }
+        // TODO: fill_transaction
+
+        let hash = rpc::dispatch_send_transaction(self, &tx.clone().into()).await?;
+        Ok(PendingTransaction::new(hash, self))
+    }
+
+    async fn send_raw_transaction(&self, tx: Bytes) -> Result<PendingTransaction<'_>, RpcError> {
+        let hash = rpc::dispatch_send_raw_transaction(self, &tx.into()).await?;
+        Ok(PendingTransaction::new(hash, self))
+    }
 
     /// Signs data using a specific account. This account needs to be unlocked.
     async fn sign(&self, from: Address, data: Bytes) -> Result<Signature, RpcError> {
@@ -432,17 +426,6 @@ where
 
     async fn txpool_status(&self) -> Result<TxpoolStatus, RpcError> {
         rpc::dispatch_txpool_status(self).await
-    }
-}
-
-#[async_trait]
-impl Middleware for Box<dyn Middleware> {
-    fn inner(&self) -> &dyn Middleware {
-        Middleware::inner(&**self)
-    }
-
-    fn provider(&self) -> &dyn RpcConnection {
-        Middleware::provider(&**self)
     }
 }
 

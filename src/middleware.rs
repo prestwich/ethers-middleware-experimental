@@ -6,8 +6,9 @@ use ethers::prelude::{
     *,
 };
 
-use crate::{error::RpcError, provider::RpcConnection};
+use crate::{error::RpcError, pending_transaction::PendingTransaction, provider::RpcConnection};
 
+/// Exposes RPC methods shared by all clients
 #[async_trait]
 pub trait Middleware: Debug + Send + Sync {
     #[doc(hidden)]
@@ -145,30 +146,21 @@ pub trait Middleware: Debug + Send + Sync {
         self.inner().create_access_list(tx, block).await
     }
 
-    // /// Sends the transaction to the entire Ethereum network and returns the transaction's hash
-    // /// This will consume gas from the account that signed the transaction.
-    // async fn send_transaction<T: Into<TypedTransaction> + Send + Sync>(
-    //     &self,
-    //     tx: T,
-    //     block: Option<BlockNumber>,
-    // ) -> Result<PendingTransaction<'_, Self::Provider>, RpcError> {
-    //     self.inner()
-    //         .send_transaction(tx, block)
-    //         .await
-    //
-    // }
+    /// Sends the transaction to the entire Ethereum network and returns the transaction's hash
+    /// This will consume gas from the account that signed the transaction.
+    async fn send_transaction(
+        &self,
+        tx: &TypedTransaction,
+        block: Option<BlockNumber>,
+    ) -> Result<PendingTransaction<'_>, RpcError> {
+        self.inner().send_transaction(tx, block).await
+    }
 
-    // /// Send the raw RLP encoded transaction to the entire Ethereum network and returns the
-    // /// transaction's hash This will consume gas from the account that signed the transaction.
-    // async fn send_raw_transaction<'a>(
-    //     &'a self,
-    //     tx: Bytes,
-    // ) -> Result<PendingTransaction<'a, Self::Provider>, RpcError> {
-    //     self.inner()
-    //         .send_raw_transaction(tx)
-    //         .await
-    //
-    // }
+    /// Send the raw RLP encoded transaction to the entire Ethereum network and returns the
+    /// transaction's hash This will consume gas from the account that signed the transaction.
+    async fn send_raw_transaction(&self, tx: Bytes) -> Result<PendingTransaction<'_>, RpcError> {
+        self.inner().send_raw_transaction(tx).await
+    }
 
     /// Signs data using a specific account. This account needs to be unlocked.
     async fn sign(&self, from: Address, data: Bytes) -> Result<Signature, RpcError> {
@@ -245,6 +237,7 @@ pub trait Middleware: Debug + Send + Sync {
     }
 }
 
+/// Exposes geth-specific RPC methods
 #[async_trait]
 pub trait GethMiddleware: Middleware + Send + Sync {
     /// Upcast the `GethMiddleware` to a generic `Middleware`
@@ -275,6 +268,7 @@ pub trait GethMiddleware: Middleware + Send + Sync {
     }
 }
 
+/// Exposes parity (openethereum)-specific RPC methods
 #[async_trait]
 pub trait ParityMiddleware: Middleware + Send + Sync {
     /// Upcast the `ParityMiddleware` to a generic `Middleware`
