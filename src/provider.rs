@@ -45,8 +45,7 @@ where
 }
 
 #[async_trait]
-impl Middleware for Box<dyn Middleware  + 'static>
-{
+impl Middleware for Box<dyn Middleware> {
     fn inner(&self) -> &dyn Middleware {
         Middleware::inner(&**self)
     }
@@ -80,7 +79,7 @@ mod test {
         }
 
         async fn get_block_number(&self) -> Result<U64, RpcError> {
-          Ok(0.into())
+            Ok(0.into())
         }
     }
 
