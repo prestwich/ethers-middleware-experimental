@@ -44,12 +44,45 @@ where
     }
 }
 
+#[async_trait]
+impl Middleware for Box<dyn Middleware  + 'static>
+{
+    fn inner(&self) -> &dyn Middleware {
+        Middleware::inner(&**self)
+    }
+
+    fn provider(&self) -> &dyn RpcConnection {
+        Middleware::provider(&**self)
+    }
+
+    async fn get_block_number(&self) -> Result<U64, RpcError> {
+        Middleware::get_block_number(&**self).await
+    }
+}
+
 #[cfg(test)]
 mod test {
-    use core::panic;
 
     use super::*;
     use crate::transports::http::Http;
+
+    #[derive(Debug)]
+    struct DummyMiddleware;
+
+    #[async_trait]
+    impl Middleware for DummyMiddleware {
+        fn inner(&self) -> &dyn Middleware {
+            todo!()
+        }
+
+        fn provider(&self) -> &dyn RpcConnection {
+            todo!()
+        }
+
+        async fn get_block_number(&self) -> Result<U64, RpcError> {
+          Ok(0.into())
+        }
+    }
 
     #[tokio::test]
     async fn it_makes_a_req() {
@@ -57,5 +90,10 @@ mod test {
             .parse()
             .unwrap();
         dbg!(provider.get_block_number().await.unwrap());
+        let provider = Box::new(provider) as Box<dyn Middleware>;
+        dbg!(provider.get_block_number().await.unwrap());
+        let providers = vec![provider, Box::new(DummyMiddleware)];
+
+        assert_eq!(providers[1].get_block_number().await.unwrap(), 0.into());
     }
 }
