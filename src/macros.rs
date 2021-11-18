@@ -51,7 +51,7 @@ macro_rules! decl_rpc_param_type {
 macro_rules! decl_rpc_response_type {
     ($method:literal, $name:ident, { $( $resp:ident: $resp_ty:ty, )* }) => {
         paste::paste! {
-            #[doc = "RPC Response for `" $method]
+            #[doc = "RPC Response for `" $method "`"]
             #[derive(Debug, serde::Deserialize)]
             pub struct [<$name Response>]  {
                 $($resp: $resp_ty,)*
@@ -61,14 +61,14 @@ macro_rules! decl_rpc_response_type {
 }
 
 macro_rules! impl_rpc {
-    ($method:literal, $name:ident, response: $resp:ty) => {
+    ($method:literal, $name:ident, response: $resp:ty $(,)?) => {
         paste::paste! {
             decl_rpc_param_type!($method, $name);
             impl_rpc_params!($method, [<$name Params>], $resp);
         }
     };
 
-    ($method:literal, $name:ident, response: { $( $resp:ident: $resp_ty:ty, )* }) => {
+    ($method:literal, $name:ident, response: { $( $resp:ident: $resp_ty:ty, )* $(,)?}) => {
         paste::paste! {
             decl_rpc_param_type!($method, $name);
             decl_rpc_response_type!($method, $name, { $( $resp: $resp_ty, )* });
@@ -76,14 +76,14 @@ macro_rules! impl_rpc {
         }
     };
 
-    ($method:literal, $name:ident, params: [ $($param:ty),* ], response: $resp:ty) => {
+    ($method:literal, $name:ident, params: [ $($param:ty),* ], response: $resp:ty $(,)?) => {
         paste::paste! {
             decl_rpc_param_type!($method, $name, params: [ $($param),* ]);
             impl_rpc_params!($method, [<$name Params>], $resp);
         }
     };
 
-    ($method:literal, $name:ident, params: [ $($param:ty),* ], response: { $( $resp:ident: $resp_ty:ty, )* }) => {
+    ($method:literal, $name:ident, params: [ $($param:ty),* ], response: { $( $resp:ident: $resp_ty:ty, )* } $(,)?) => {
         paste::paste! {
             decl_rpc_param_type!($method, $name, params: [ $($param),* ]);
             decl_rpc_response_type!($method, $name, { $( $resp: $resp_ty, )* } );
@@ -91,7 +91,7 @@ macro_rules! impl_rpc {
         }
     };
 
-    ($method:literal, $name:ident, param: $param:ty, response: { $( $resp:ident: $resp_ty:ty, )* }) => {
+    ($method:literal, $name:ident, param: $param:ty, response: { $( $resp:ident: $resp_ty:ty, )* } $(,)?) => {
         paste::paste! {
             decl_rpc_param_type!($method, $name, param: $param);
             decl_rpc_response_type!($method, $name, { $( $resp: $resp_ty, )* });
@@ -99,9 +99,10 @@ macro_rules! impl_rpc {
         }
     };
 
-    ($method:literal, $name:ident, param: $param:ty, response: $resp:ty) => {
-        paste::paste!{
-        decl_rpc_param_type!($method, $name, param: $param);
-        impl_rpc_params!($method, [<$name Params>], $resp);}
+    ($method:literal, $name:ident, param: $param:ty, response: $resp:ty $(,)?) => {
+        paste::paste! {
+            decl_rpc_param_type!($method, $name, param: $param);
+            impl_rpc_params!($method, [<$name Params>], $resp);
+        }
     };
 }
