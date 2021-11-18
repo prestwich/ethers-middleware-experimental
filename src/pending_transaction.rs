@@ -1,6 +1,6 @@
 use ethers::core::types::{Transaction, TransactionReceipt, TxHash, U64};
 use futures_core::stream::Stream;
-use futures_util::{stream::StreamExt, FutureExt};
+use futures_util::stream::StreamExt;
 use pin_project::pin_project;
 use std::{
     fmt,
@@ -11,26 +11,9 @@ use std::{
     time::Duration,
 };
 
-use crate::{error::RpcError, middleware::Middleware};
-
-#[cfg(not(target_arch = "wasm32"))]
-use futures_timer::Delay;
-#[cfg(target_arch = "wasm32")]
-use wasm_timer::Delay;
-
-// TODO: REMOVE FROM HERE
-const DEFAULT_POLL_INTERVAL: Duration = Duration::from_secs(10);
-// https://github.com/tomusdrw/rust-web3/blob/befcb2fb8f3ca0a43e3081f68886fa327e64c8e6/src/api/eth_filter.rs#L20
-pub fn interval(duration: Duration) -> impl Stream<Item = ()> + Send + Unpin {
-    futures_util::stream::unfold((), move |_| Delay::new(duration).map(|_| Some(((), ()))))
-        .map(drop)
-}
-// Helper type alias
-#[cfg(target_arch = "wasm32")]
-pub(crate) type PinBoxFut<'a, T> = Pin<Box<dyn Future<Output = Result<T, ProviderError>> + 'a>>;
-#[cfg(not(target_arch = "wasm32"))]
-pub(crate) type PinBoxFut<'a, T> = Pin<Box<dyn Future<Output = Result<T, RpcError>> + Send + 'a>>;
-// TODO: REMOVE TO HERE
+use crate::{
+    error::RpcError, interval, middleware::Middleware, Delay, PinBoxFut, DEFAULT_POLL_INTERVAL,
+};
 
 /// A pending transaction is a transaction which has been submitted but is not yet mined.
 /// `await`'ing on a pending transaction will resolve to a transaction receipt

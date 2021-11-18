@@ -12,6 +12,10 @@ pub enum RpcError {
     /// Reqwest
     #[error("{0}")]
     Reqwest(#[from] reqwest::Error),
+
+    /// Custom
+    #[error("{0}")]
+    CustomError(String),
 }
 
 impl From<JsonRpcError> for RpcError {

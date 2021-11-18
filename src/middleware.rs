@@ -5,8 +5,14 @@ use ethers::prelude::{
     transaction::{eip2718::TypedTransaction, eip2930::AccessListWithGasUsed},
     *,
 };
+use serde_json::Value;
 
-use crate::{error::RpcError, pending_transaction::PendingTransaction, provider::RpcConnection};
+use crate::{
+    error::RpcError,
+    filter_watcher::{LogWatcher, NewBlockWatcher, PendingTransactionWatcher},
+    pending_transaction::PendingTransaction,
+    provider::RpcConnection,
+};
 
 /// Exposes RPC methods shared by all clients
 #[async_trait]
@@ -172,26 +178,79 @@ pub trait Middleware: Debug + Send + Sync {
         self.inner().get_logs(filter).await
     }
 
-    // /// Create a new block filter for later polling.
-    // async fn new_block_filter(&self) -> Result<U256, RpcError> {
-    //     self.inner().new_block_filter().await
-    // }
+    /// Create a new block filter for later polling.
+    async fn new_block_filter(&self) -> Result<U256, RpcError> {
+        self.inner().new_block_filter().await
+    }
 
-    // /// Create a new pending transaction filter for later polling.
-    // async fn new_pending_transactions_filter(&self) -> Result<U256, RpcError> {
-    //     self.inner()
-    //         .new_pending_transactions_filter()
-    //         .await
-    //
-    // }
+    /// Create a stream that repeatedly polls a new block filter
+    async fn watch_new_blocks(&self) -> Result<NewBlockWatcher, RpcError>
+    where
+        Self: Sized,
+    {
+        Ok(NewBlockWatcher::new(self.new_block_filter().await?, self))
+    }
 
-    // /// Create a new log filter for later polling.
-    // async fn new_log_filter(&self, filter: &Filter) -> Result<U256, RpcError> {
-    //     self.inner()
-    //         .new_log_filter(filter)
-    //         .await
-    //
-    // }
+    /// Create a new pending transaction filter for later polling.
+    async fn new_pending_transaction_filter(&self) -> Result<U256, RpcError> {
+        self.inner().new_pending_transaction_filter().await
+    }
+
+    /// Create a stream that repeatedly polls a pending transaction filter
+    async fn watch_new_pending_transactions(&self) -> Result<PendingTransactionWatcher, RpcError>
+    where
+        Self: Sized,
+    {
+        Ok(PendingTransactionWatcher::new(
+            self.new_pending_transaction_filter().await?,
+            self,
+        ))
+    }
+
+    /// Create a new log filter for later polling.
+    async fn new_log_filter(&self, filter: &Filter) -> Result<U256, RpcError> {
+        self.inner().new_log_filter(filter).await
+    }
+
+    /// Create a stream that repeatedly polls a log filter
+    async fn watch_new_logs(&self, filter: &Filter) -> Result<LogWatcher, RpcError>
+    where
+        Self: Sized,
+    {
+        Ok(LogWatcher::new(self.new_log_filter(filter).await?, self))
+    }
+
+    #[doc(hidden)]
+    async fn get_filter_changes(&self, id: U256) -> Result<Vec<Value>, RpcError> {
+        self.inner().get_filter_changes(id).await
+    }
+
+    /// Poll a pending transaction filter for any changes
+    async fn poll_pending_transaction_filter(&self, id: U256) -> Result<Vec<TxHash>, RpcError> {
+        self.get_filter_changes(id)
+            .await?
+            .into_iter()
+            .map(|value| serde_json::from_value(value).map_err(Into::into))
+            .collect()
+    }
+
+    /// Poll a new block filter for any changes
+    async fn poll_new_block_filter(&self, id: U256) -> Result<Vec<H256>, RpcError> {
+        self.get_filter_changes(id)
+            .await?
+            .into_iter()
+            .map(|value| serde_json::from_value(value).map_err(Into::into))
+            .collect()
+    }
+
+    /// Poll an event log filter for any changes
+    async fn poll_log_filter(&self, id: U256) -> Result<Vec<Log>, RpcError> {
+        self.get_filter_changes(id)
+            .await?
+            .into_iter()
+            .map(|value| serde_json::from_value(value).map_err(Into::into))
+            .collect()
+    }
 
     // /// Uninstall a block, log, or pending transaction filter on the RPC host
     async fn uninstall_filter(&self, id: U256) -> Result<bool, RpcError> {

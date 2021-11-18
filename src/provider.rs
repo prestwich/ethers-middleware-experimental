@@ -251,26 +251,24 @@ where
         rpc::dispatch_get_logs(self, &filter.clone().into()).await
     }
 
-    // /// Create a new block filter for later polling.
-    // async fn new_block_filter(&self) -> Result<U256, RpcError> {
-    //     rpc::dispatch_new_block_filter(self).await
-    // }
+    /// Create a new block filter for later polling.
+    async fn new_block_filter(&self) -> Result<U256, RpcError> {
+        rpc::dispatch_new_block_filter(self).await
+    }
 
-    // /// Create a new pending transaction filter for later polling.
-    // async fn new_pending_transactions_filter(&self) -> Result<U256, RpcError> {
-    //     self.inner()
-    //         .new_pending_transactions_filter()
-    //         .await
-    //
-    // }
+    /// Create a new pending transaction filter for later polling.
+    async fn new_pending_transaction_filter(&self) -> Result<U256, RpcError> {
+        rpc::dispatch_new_pending_transaction_filter(self).await
+    }
 
-    // /// Create a new log filter for later polling.
-    // async fn new_log_filter(&self, filter: &Filter) -> Result<U256, RpcError> {
-    //     self.inner()
-    //         .new_log_filter(filter)
-    //         .await
-    //
-    // }
+    /// Create a new log filter for later polling.
+    async fn new_log_filter(&self, filter: &Filter) -> Result<U256, RpcError> {
+        rpc::dispatch_new_filter(self, &filter.clone().into()).await
+    }
+
+    async fn get_filter_changes(&self, id: U256) -> Result<Vec<Value>, RpcError> {
+        rpc::dispatch_get_filter_changes(self, &id.into()).await
+    }
 
     // /// Uninstall a block, log, or pending transaction filter on the RPC host
     async fn uninstall_filter(&self, id: U256) -> Result<bool, RpcError> {
