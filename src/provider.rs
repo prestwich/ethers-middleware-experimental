@@ -11,14 +11,14 @@ use crate::{
 
 #[async_trait]
 pub trait RpcConnection: Debug + Send + Sync {
-    async fn _request(&self, request: &RawRequest<'_>) -> Result<RawResponse, RpcError>;
+    async fn _request(&self, request: RawRequest<'_>) -> Result<RawResponse, RpcError>;
 
-    async fn request<T>(&self, params: &T) -> Result<T::Response, RpcError>
+    async fn request<T>(&self, params: T) -> Result<T::Response, RpcError>
     where
         Self: Sized,
         T: RequestParams,
     {
-        let resp = self._request(&params.to_raw_request()).await?;
+        let resp = self._request(params.to_raw_request()).await?;
         match resp {
             RawResponse::Success { result } => Ok(serde_json::from_value(result)?),
             RawResponse::Error { error } => Err(RpcError::ErrorResponse(error)),

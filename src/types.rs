@@ -67,10 +67,10 @@ impl RawResponse {
 
 #[derive(Serialize, Debug)]
 pub struct JsonRpcRequest<'a> {
-    id: u64,
-    jsonrpc: &'static str,
+    pub(crate) id: u64,
+    pub(crate) jsonrpc: &'static str,
     #[serde(flatten)]
-    request: RawRequest<'a>,
+    pub(crate) request: RawRequest<'a>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -95,7 +95,7 @@ pub trait RequestParams: Serialize + Send + Sync + Debug {
 
     async fn send_via(&self, connection: &dyn RpcConnection) -> Result<Self::Response, RpcError> {
         connection
-            ._request(&self.to_raw_request())
+            ._request(self.to_raw_request())
             .await?
             .deserialize()
     }
