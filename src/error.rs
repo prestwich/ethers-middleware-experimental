@@ -13,6 +13,10 @@ pub enum RpcError {
     #[error("{0}")]
     Reqwest(#[from] reqwest::Error),
 
+    /// Attempted to sign a transaction without a signer
+    #[error("Attempted to sign a transaction without a signer")]
+    SignerUnavailable,
+
     /// Custom
     #[error("{0}")]
     CustomError(String),

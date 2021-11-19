@@ -9,8 +9,7 @@ use async_trait::async_trait;
 
 use crate::{
     error::RpcError,
-    middleware::{GethMiddleware, Middleware, ParityMiddleware},
-    pending_transaction::PendingTransaction,
+    middleware::{GethMiddleware, Middleware, MiddlewareExt, ParityMiddleware},
     rpc,
     types::{RawRequest, RawResponse, RequestParams},
 };
@@ -227,18 +226,16 @@ where
         &self,
         tx: &TypedTransaction,
         block: Option<BlockNumber>,
-    ) -> Result<PendingTransaction<'_>, RpcError> {
+    ) -> Result<TxHash, RpcError> {
         let _block = block.unwrap_or_else(|| BlockNumber::Latest);
 
         // TODO: fill_transaction
 
-        let hash = rpc::dispatch_send_transaction(self, &tx.clone().into()).await?;
-        Ok(PendingTransaction::new(hash, self))
+        rpc::dispatch_send_transaction(self, &tx.clone().into()).await
     }
 
-    async fn send_raw_transaction(&self, tx: Bytes) -> Result<PendingTransaction<'_>, RpcError> {
-        let hash = rpc::dispatch_send_raw_transaction(self, &tx.into()).await?;
-        Ok(PendingTransaction::new(hash, self))
+    async fn send_raw_transaction(&self, tx: Bytes) -> Result<TxHash, RpcError> {
+        rpc::dispatch_send_raw_transaction(self, &tx.into()).await
     }
 
     /// Signs data using a specific account. This account needs to be unlocked.
@@ -424,6 +421,28 @@ where
 
     async fn txpool_status(&self) -> Result<TxpoolStatus, RpcError> {
         rpc::dispatch_txpool_status(self).await
+    }
+}
+
+#[async_trait]
+impl<T> MiddlewareExt for T
+where
+    T: RpcConnection,
+{
+    fn inner_ext(&self) -> &dyn MiddlewareExt {
+        self
+    }
+
+    fn as_middleware(&self) -> &dyn Middleware {
+        self
+    }
+
+    async fn sign_transaction(
+        &self,
+        _: &TypedTransaction,
+        _: Address,
+    ) -> Result<Signature, RpcError> {
+        Err(RpcError::SignerUnavailable)
     }
 }
 

@@ -5,11 +5,13 @@ use ethers::prelude::{
     transaction::{eip2718::TypedTransaction, eip2930::AccessListWithGasUsed},
     *,
 };
+use futures_util::future::join_all;
 use serde_json::Value;
 
 use crate::{
     error::RpcError,
     filter_watcher::{LogWatcher, NewBlockWatcher, PendingTransactionWatcher},
+    pending_escalator::EscalatingPending,
     pending_transaction::PendingTransaction,
     provider::RpcConnection,
 };
@@ -22,6 +24,11 @@ pub trait Middleware: Debug + Send + Sync {
 
     #[doc(hidden)]
     fn provider(&self) -> &dyn RpcConnection;
+
+    /// Return a default tx sender address for this provider
+    fn default_sender(&self) -> Option<Address> {
+        None
+    }
 
     /// Returns the current client version using the `web3_clientVersion` RPC.
     async fn client_version(&self) -> Result<String, RpcError> {
@@ -158,13 +165,13 @@ pub trait Middleware: Debug + Send + Sync {
         &self,
         tx: &TypedTransaction,
         block: Option<BlockNumber>,
-    ) -> Result<PendingTransaction<'_>, RpcError> {
+    ) -> Result<TxHash, RpcError> {
         self.inner().send_transaction(tx, block).await
     }
 
     /// Send the raw RLP encoded transaction to the entire Ethereum network and returns the
     /// transaction's hash This will consume gas from the account that signed the transaction.
-    async fn send_raw_transaction(&self, tx: Bytes) -> Result<PendingTransaction<'_>, RpcError> {
+    async fn send_raw_transaction(&self, tx: Bytes) -> Result<TxHash, RpcError> {
         self.inner().send_raw_transaction(tx).await
     }
 
@@ -183,41 +190,14 @@ pub trait Middleware: Debug + Send + Sync {
         self.inner().new_block_filter().await
     }
 
-    /// Create a stream that repeatedly polls a new block filter
-    async fn watch_new_blocks(&self) -> Result<NewBlockWatcher, RpcError>
-    where
-        Self: Sized,
-    {
-        Ok(NewBlockWatcher::new(self.new_block_filter().await?, self))
-    }
-
     /// Create a new pending transaction filter for later polling.
     async fn new_pending_transaction_filter(&self) -> Result<U256, RpcError> {
         self.inner().new_pending_transaction_filter().await
     }
 
-    /// Create a stream that repeatedly polls a pending transaction filter
-    async fn watch_new_pending_transactions(&self) -> Result<PendingTransactionWatcher, RpcError>
-    where
-        Self: Sized,
-    {
-        Ok(PendingTransactionWatcher::new(
-            self.new_pending_transaction_filter().await?,
-            self,
-        ))
-    }
-
     /// Create a new log filter for later polling.
     async fn new_log_filter(&self, filter: &Filter) -> Result<U256, RpcError> {
         self.inner().new_log_filter(filter).await
-    }
-
-    /// Create a stream that repeatedly polls a log filter
-    async fn watch_new_logs(&self, filter: &Filter) -> Result<LogWatcher, RpcError>
-    where
-        Self: Sized,
-    {
-        Ok(LogWatcher::new(self.new_log_filter(filter).await?, self))
     }
 
     #[doc(hidden)]
@@ -397,5 +377,149 @@ pub trait ParityMiddleware: Middleware + Send + Sync {
     /// Returns all traces of a given transaction
     async fn trace_transaction(&self, hash: H256) -> Result<Vec<Trace>, RpcError> {
         self.inner_parity().trace_transaction(hash).await
+    }
+}
+
+#[async_trait]
+pub trait MiddlewareExt: Middleware + Send + Sync {
+    /// Return an inner middleware, if any
+    fn inner_ext(&self) -> &dyn MiddlewareExt;
+
+    /// Upcast the `MiddlewareExt` to a generic `Middleware`
+    fn as_middleware(&self) -> &dyn Middleware;
+
+    /// Sign a transaction, if a signer is available
+    async fn sign_transaction(
+        &self,
+        tx: &TypedTransaction,
+        from: Address,
+    ) -> Result<Signature, RpcError> {
+        self.inner_ext().sign_transaction(tx, from).await
+    }
+
+    /// Sends the transaction to the entire Ethereum network and returns the
+    /// transaction's hash. This will consume gas from the account that signed
+    /// the transaction.
+    async fn send_transaction(
+        &self,
+        tx: &TypedTransaction,
+        block: Option<BlockNumber>,
+    ) -> Result<PendingTransaction<'_>, RpcError> {
+        let this = self.as_middleware();
+
+        let hash = this.send_transaction(tx, block).await?;
+        Ok(PendingTransaction::new(hash, this))
+    }
+
+    /// Send a transaction with a simple escalation policy.
+    ///
+    /// `policy` should be a boxed function that maps `original_gas_price`
+    /// and `number_of_previous_escalations` -> `new_gas_price`.
+    ///
+    /// e.g. `Box::new(|start, escalation_index| start * 1250.pow(escalations) /
+    /// 1000.pow(escalations))`
+    async fn send_escalating<'a>(
+        &'a self,
+        tx: &TypedTransaction,
+        escalations: usize,
+        policy: EscalationPolicy,
+    ) -> Result<EscalatingPending<'_>, RpcError> {
+        let this = self.as_middleware();
+        let /*mut*/ original = tx.clone();
+
+        // TODO(James): fill_transaction
+        // self.fill_transaction(&mut original, None).await?;
+
+        let gas_price = original.gas_price().expect("filled");
+        let chain_id = self.chain_id().await?.low_u64();
+        let sign_futs: Vec<_> = (0..escalations)
+            .map(|i| {
+                let new_price = policy(gas_price, i);
+                let mut r = original.clone();
+                r.set_gas_price(new_price);
+                r
+            })
+            .map(|req| async move {
+                self.sign_transaction(&req, req.from().copied().unwrap_or_default())
+                    .await
+                    .map(|sig| req.rlp_signed(chain_id, &sig))
+            })
+            .collect();
+
+        // we reverse for convenience. Ensuring that we can always just
+        // `pop()` the next tx off the back later
+        let mut signed = join_all(sign_futs)
+            .await
+            .into_iter()
+            .collect::<Result<Vec<_>, _>>()?;
+        signed.reverse();
+
+        Ok(EscalatingPending::new(this, signed))
+    }
+
+    /// Send the raw RLP encoded transaction to the entire Ethereum network and
+    /// returns the transaction's hash This will consume gas from the account
+    /// that signed the transaction.
+    async fn send_raw_transaction(&self, tx: Bytes) -> Result<PendingTransaction<'_>, RpcError> {
+        let this = self.as_middleware();
+        let hash = this.send_raw_transaction(tx).await?;
+        Ok(PendingTransaction::new(hash, this))
+    }
+
+    /// Create a stream that repeatedly polls a log filter
+    async fn watch_new_logs(&self, filter: &Filter) -> Result<LogWatcher, RpcError> {
+        let this = self.as_middleware();
+        Ok(LogWatcher::new(this.new_log_filter(filter).await?, this))
+    }
+
+    /// Create a stream that repeatedly polls a new block filter
+    async fn watch_new_blocks(&self) -> Result<NewBlockWatcher, RpcError> {
+        let this = self.as_middleware();
+        Ok(NewBlockWatcher::new(this.new_block_filter().await?, this))
+    }
+
+    /// Create a stream that repeatedly polls a pending transaction filter
+    async fn watch_new_pending_transactions(&self) -> Result<PendingTransactionWatcher, RpcError> {
+        let this = self.as_middleware();
+        Ok(PendingTransactionWatcher::new(
+            this.new_pending_transaction_filter().await?,
+            this,
+        ))
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::Middleware;
+    use crate::provider::RpcConnection;
+
+    #[derive(Debug)]
+    pub struct CompileCheck {
+        inner: Box<dyn Middleware>,
+    }
+
+    impl Middleware for CompileCheck {
+        fn inner(&self) -> &dyn Middleware {
+            &*self.inner
+        }
+
+        fn provider(&self) -> &dyn RpcConnection {
+            self.inner().provider()
+        }
+    }
+
+    #[derive(Debug)]
+    pub struct CompileCheckRef<'a> {
+        inner: &'a dyn Middleware,
+    }
+
+    impl<'a> Middleware for CompileCheckRef<'a> {
+        fn inner(&self) -> &dyn Middleware {
+            self.inner
+        }
+
+        fn provider(&self) -> &dyn RpcConnection {
+            self.inner().provider()
+        }
     }
 }

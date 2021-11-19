@@ -7,5 +7,7 @@
 - [ ] Tx Dispatch
   - [x] modify pending tx
   - [ ] fill_transaction
+  - [ ] default sender
 - [ ] middlewareext trait
-  - [ ] modify escalator
+  - [x] modify escalator
+- [ ] ENS resolution
