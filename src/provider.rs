@@ -1,6 +1,9 @@
-use ethers::prelude::{
-    transaction::{eip2718::TypedTransaction, eip2930::AccessListWithGasUsed},
-    *,
+use ethers::{
+    abi::ParamType,
+    prelude::{
+        transaction::{eip2718::TypedTransaction, eip2930::AccessListWithGasUsed},
+        *,
+    },
 };
 use serde_json::Value;
 use std::fmt::Debug;
@@ -435,6 +438,26 @@ where
 
     fn as_middleware(&self) -> &dyn Middleware {
         self
+    }
+
+    async fn ens_resolve(
+        &self,
+        registry: Option<Address>,
+        ens_name: &str,
+    ) -> Result<Address, RpcError> {
+        self.query_resolver(registry, ParamType::Address, ens_name, ens::ADDR_SELECTOR)
+            .await
+    }
+
+    async fn ens_lookup(
+        &self,
+        registry: Option<Address>,
+        address: Address,
+    ) -> Result<String, RpcError> {
+        let ens_name = ens::reverse_address(address);
+
+        self.query_resolver(registry, ParamType::String, &ens_name, ens::NAME_SELECTOR)
+            .await
     }
 
     async fn sign_transaction(

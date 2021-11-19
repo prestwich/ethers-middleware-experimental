@@ -17,6 +17,14 @@ pub enum RpcError {
     #[error("Attempted to sign a transaction without a signer")]
     SignerUnavailable,
 
+    /// Attempted to resolve ENS on a network with no known deployment
+    #[error("No known ENS deployment for chain id {0}")]
+    NoKnownEns(u64),
+
+    /// An error during ENS name resolution
+    #[error("ens name not found: {0}")]
+    EnsError(String),
+
     /// Custom
     #[error("{0}")]
     CustomError(String),

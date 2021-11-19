@@ -10,4 +10,4 @@
   - [ ] default sender
 - [ ] middlewareext trait
   - [x] modify escalator
-- [ ] ENS resolution
+  - [ ] ENS resolution

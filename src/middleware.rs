@@ -1,20 +1,35 @@
 use std::fmt::Debug;
 
 use async_trait::async_trait;
-use ethers::prelude::{
-    transaction::{eip2718::TypedTransaction, eip2930::AccessListWithGasUsed},
-    *,
+use ethers::{
+    abi::{self, Detokenize, ParamType},
+    prelude::{
+        transaction::{eip2718::TypedTransaction, eip2930::AccessListWithGasUsed},
+        *,
+    },
 };
 use futures_util::future::join_all;
 use serde_json::Value;
 
 use crate::{
+    ens,
     error::RpcError,
     filter_watcher::{LogWatcher, NewBlockWatcher, PendingTransactionWatcher},
     pending_escalator::EscalatingPending,
     pending_transaction::PendingTransaction,
     provider::RpcConnection,
 };
+
+/// infallible conversion of Bytes to Address/String
+///
+/// # Panics
+///
+/// If the provided bytes were not an interpretation of an address
+fn decode_bytes<T: Detokenize>(param: ParamType, bytes: Bytes) -> T {
+    let tokens = abi::decode(&[param], bytes.as_ref())
+        .expect("could not abi-decode bytes to address tokens");
+    T::from_tokens(tokens).expect("could not parse tokens as address")
+}
 
 /// Exposes RPC methods shared by all clients
 #[async_trait]
@@ -388,6 +403,62 @@ pub trait MiddlewareExt: Middleware + Send + Sync {
     /// Upcast the `MiddlewareExt` to a generic `Middleware`
     fn as_middleware(&self) -> &dyn Middleware;
 
+    async fn ens_resolve(
+        &self,
+        registry: Option<Address>,
+        ens_name: &str,
+    ) -> Result<Address, RpcError> {
+        self.inner_ext().ens_resolve(registry, ens_name).await
+    }
+
+    async fn ens_lookup(
+        &self,
+        registry: Option<Address>,
+        address: Address,
+    ) -> Result<String, RpcError> {
+        self.inner_ext().ens_lookup(registry, address).await
+    }
+
+    #[doc(hidden)]
+    async fn query_resolver<T>(
+        &self,
+        registry: Option<Address>,
+        param: ParamType,
+        ens_name: &str,
+        selector: Selector,
+    ) -> Result<T, RpcError>
+    where
+        T: Detokenize,
+        Self: Sized,
+    {
+        let ens_addr = match registry {
+            Some(registry) => registry,
+            None => {
+                let chain_id = self.chain_id().await?;
+                ens::known_ens(chain_id).ok_or(RpcError::NoKnownEns(chain_id.low_u64()))?
+            }
+        };
+
+        let data = self
+            .call(&ens::get_resolver(ens_addr, ens_name).into(), None)
+            .await?;
+
+        let resolver_address: Address = decode_bytes(ParamType::Address, data);
+        if resolver_address == Address::zero() {
+            return Err(RpcError::EnsError(ens_name.to_owned()));
+        }
+
+        // resolve
+        let data = self
+            .call(
+                &ens::resolve(resolver_address, selector, ens_name).into(),
+                None,
+            )
+            .await?;
+
+        Ok(decode_bytes(param, data))
+    }
+
     /// Sign a transaction, if a signer is available
     async fn sign_transaction(
         &self,
@@ -410,6 +481,8 @@ pub trait MiddlewareExt: Middleware + Send + Sync {
         let hash = this.send_transaction(tx, block).await?;
         Ok(PendingTransaction::new(hash, this))
     }
+
+    // TODO: ens resolver
 
     /// Send a transaction with a simple escalation policy.
     ///
