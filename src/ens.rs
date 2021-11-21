@@ -7,7 +7,7 @@ use ethers::core::{
 
 /// ENS registry address (`0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e`)
 /// Same on Rinkeby, Goerli, and Ropsten
-pub const MAINNET_ENS_ADDRESS: Address = H160([
+const MAINNET_ENS_ADDRESS: Address = H160([
     // cannot set type aliases as constructors
     0, 0, 0, 0, 0, 12, 46, 7, 78, 198, 154, 13, 251, 41, 151, 186, 108, 125, 46, 30,
 ]);

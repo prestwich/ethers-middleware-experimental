@@ -96,7 +96,7 @@ where
                 let items: Vec<R> = futures_util::ready!(fut.as_mut().poll(cx))
                     .unwrap_or_default()
                     .into_iter()
-                    .map(|value| serde_json::from_value::<R>(value))
+                    .map(serde_json::from_value::<R>)
                     .collect::<Result<_, _>>()
                     .unwrap_or_default();
                 cx.waker().wake_by_ref();

@@ -435,7 +435,7 @@ pub trait MiddlewareExt: Middleware + Send + Sync {
             Some(registry) => registry,
             None => {
                 let chain_id = self.chain_id().await?;
-                ens::known_ens(chain_id).ok_or(RpcError::NoKnownEns(chain_id.low_u64()))?
+                ens::known_ens(chain_id).ok_or_else(|| RpcError::NoKnownEns(chain_id.low_u64()))?
             }
         };
 

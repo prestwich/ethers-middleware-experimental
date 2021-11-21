@@ -44,7 +44,7 @@ impl<'a> PendingTransaction<'a> {
 
     /// Returns the Provider associated with the pending transaction
     pub fn provider(&self) -> &dyn Middleware {
-        self.provider.clone()
+        self.provider
     }
 
     /// Sets the number of confirmations for the pending transaction to resolve

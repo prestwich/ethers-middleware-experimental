@@ -83,7 +83,7 @@ where
         block_hash_or_number: BlockId,
     ) -> Result<Option<Block<TxHash>>, RpcError> {
         let resp = get_block_gen(self, block_hash_or_number, false).await?;
-        Ok(resp.map(|resp| serde_json::from_value(resp)).transpose()?)
+        Ok(resp.map(serde_json::from_value).transpose()?)
     }
 
     /// Gets the block at `block_hash_or_number` (full transactions included)
@@ -92,7 +92,7 @@ where
         block_hash_or_number: BlockId,
     ) -> Result<Option<Block<Transaction>>, RpcError> {
         let resp = get_block_gen(self, block_hash_or_number, true).await?;
-        Ok(resp.map(|resp| serde_json::from_value(resp)).transpose()?)
+        Ok(resp.map(serde_json::from_value).transpose()?)
     }
 
     /// Gets the block uncle count at `block_hash_or_number`
@@ -172,7 +172,7 @@ where
         from: Address,
         block: Option<BlockNumber>,
     ) -> Result<U256, RpcError> {
-        let block = block.unwrap_or_else(|| BlockNumber::Latest);
+        let block = block.unwrap_or(BlockNumber::Latest);
         rpc::dispatch_get_transaction_count(self, &rpc::GetTransactionCountParams(from, block))
             .await
     }
@@ -183,7 +183,7 @@ where
         from: Address,
         block: Option<BlockNumber>,
     ) -> Result<U256, RpcError> {
-        let block = block.unwrap_or_else(|| BlockNumber::Latest);
+        let block = block.unwrap_or(BlockNumber::Latest);
         rpc::dispatch_get_balance(self, &rpc::GetBalanceParams(from, block)).await
     }
 
@@ -201,7 +201,7 @@ where
         tx: &TypedTransaction,
         block: Option<BlockNumber>,
     ) -> Result<Bytes, RpcError> {
-        let block = block.unwrap_or_else(|| BlockNumber::Latest);
+        let block = block.unwrap_or(BlockNumber::Latest);
         rpc::dispatch_call(self, &rpc::CallParams(tx.clone(), block)).await
     }
 
@@ -219,7 +219,7 @@ where
         tx: &TypedTransaction,
         block: Option<BlockNumber>,
     ) -> Result<AccessListWithGasUsed, RpcError> {
-        let block = block.unwrap_or_else(|| BlockNumber::Latest);
+        let block = block.unwrap_or(BlockNumber::Latest);
 
         rpc::dispatch_create_access_list(self, &rpc::CreateAccessListParams(tx.clone(), block))
             .await
@@ -230,7 +230,7 @@ where
         tx: &TypedTransaction,
         block: Option<BlockNumber>,
     ) -> Result<TxHash, RpcError> {
-        let _block = block.unwrap_or_else(|| BlockNumber::Latest);
+        let _block = block.unwrap_or(BlockNumber::Latest);
 
         // TODO: fill_transaction
 
@@ -282,14 +282,14 @@ where
         location: H256,
         block: Option<BlockNumber>,
     ) -> Result<H256, RpcError> {
-        let block = block.unwrap_or_else(|| BlockNumber::Latest);
+        let block = block.unwrap_or(BlockNumber::Latest);
 
         rpc::dispatch_get_storage_at(self, &rpc::GetStorageAtParams(from, location, block)).await
     }
 
     /// Returns the deployed code at a given address
     async fn get_code(&self, at: Address, block: Option<BlockNumber>) -> Result<Bytes, RpcError> {
-        let block = block.unwrap_or_else(|| BlockNumber::Latest);
+        let block = block.unwrap_or(BlockNumber::Latest);
         rpc::dispatch_get_code(self, &rpc::GetCodeParams(at, block)).await
     }
 
@@ -301,7 +301,7 @@ where
         locations: Vec<H256>,
         block: Option<BlockNumber>,
     ) -> Result<EIP1186ProofResponse, RpcError> {
-        let block = block.unwrap_or_else(|| BlockNumber::Latest);
+        let block = block.unwrap_or(BlockNumber::Latest);
         rpc::dispatch_get_proof(self, &rpc::GetProofParams(from, locations, block)).await
     }
 
@@ -340,7 +340,7 @@ where
         trace_type: Vec<TraceType>,
         block: Option<BlockNumber>,
     ) -> Result<BlockTrace, RpcError> {
-        let block = block.unwrap_or_else(|| BlockNumber::Latest);
+        let block = block.unwrap_or(BlockNumber::Latest);
         rpc::dispatch_trace_call(self, &rpc::TraceCallParams(req, trace_type, block)).await
     }
 
