@@ -8,6 +8,6 @@
   - [x] modify pending tx
   - [ ] fill_transaction
   - [ ] default sender
-- [ ] middlewareext trait
+- [ ] Middleware trait
   - [x] modify escalator
   - [ ] ENS resolution

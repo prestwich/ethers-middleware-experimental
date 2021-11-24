@@ -8,7 +8,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use crate::{error::RpcError, middleware::Middleware, Delay, PinBoxFut};
+use crate::{error::RpcError, middleware::BaseMiddleware, Delay, PinBoxFut};
 
 /// States for the EscalatingPending future
 enum EscalatorStates<'a> {
@@ -25,7 +25,7 @@ enum EscalatorStates<'a> {
 #[pin_project(project = PendingProj)]
 #[derive(Debug)]
 pub struct EscalatingPending<'a> {
-    provider: &'a dyn Middleware,
+    provider: &'a dyn BaseMiddleware,
     broadcast_interval: Duration,
     polling_interval: Duration,
     txns: Vec<Bytes>,
@@ -36,13 +36,13 @@ pub struct EscalatingPending<'a> {
 
 impl<'a> EscalatingPending<'a> {
     /// Instantiate a new EscalatingPending. This should only be called by the
-    /// Middleware trait.
+    /// BaseMiddleware trait.
     ///
     /// Callers MUST ensure that transactions are in _reverse_ broadcast order
     /// (this just makes writing the code easier, as we can use `pop()` a lot).
     ///
     /// TODO: consider deserializing and checking invariants (gas order, etc.)
-    pub(crate) fn new(provider: &'a dyn Middleware, mut txns: Vec<Bytes>) -> Self {
+    pub(crate) fn new(provider: &'a dyn BaseMiddleware, mut txns: Vec<Bytes>) -> Self {
         if txns.is_empty() {
             panic!("bad args");
         }

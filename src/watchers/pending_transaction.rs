@@ -12,7 +12,7 @@ use std::{
 };
 
 use crate::{
-    error::RpcError, interval, middleware::Middleware, Delay, PinBoxFut, DEFAULT_POLL_INTERVAL,
+    error::RpcError, interval, middleware::BaseMiddleware, Delay, PinBoxFut, DEFAULT_POLL_INTERVAL,
 };
 
 /// A pending transaction is a transaction which has been submitted but is not yet mined.
@@ -24,14 +24,14 @@ use crate::{
 pub struct PendingTransaction<'a> {
     tx_hash: TxHash,
     confirmations: usize,
-    provider: &'a dyn Middleware,
+    provider: &'a dyn BaseMiddleware,
     state: PendingTxState<'a>,
     interval: Box<dyn Stream<Item = ()> + Send + Unpin>,
 }
 
 impl<'a> PendingTransaction<'a> {
     /// Creates a new pending transaction poller from a hash and a provider
-    pub fn new(tx_hash: TxHash, provider: &'a dyn Middleware) -> Self {
+    pub fn new(tx_hash: TxHash, provider: &'a dyn BaseMiddleware) -> Self {
         let delay = Box::pin(Delay::new(DEFAULT_POLL_INTERVAL));
         Self {
             tx_hash,
@@ -43,7 +43,7 @@ impl<'a> PendingTransaction<'a> {
     }
 
     /// Returns the Provider associated with the pending transaction
-    pub fn provider(&self) -> &dyn Middleware {
+    pub fn provider(&self) -> &dyn BaseMiddleware {
         self.provider
     }
 

@@ -16,7 +16,9 @@ use std::{
     vec::IntoIter,
 };
 
-use crate::{error::RpcError, interval, middleware::Middleware, PinBoxFut, DEFAULT_POLL_INTERVAL};
+use crate::{
+    error::RpcError, interval, middleware::BaseMiddleware, PinBoxFut, DEFAULT_POLL_INTERVAL,
+};
 
 enum FilterWatcherState<'a, R> {
     WaitForInterval,
@@ -31,7 +33,7 @@ pub struct FilterWatcher<'a, R> {
     /// The filter's installed id on the ethereum node
     pub id: U256,
 
-    provider: &'a dyn Middleware,
+    provider: &'a dyn BaseMiddleware,
 
     // The polling interval
     interval: Box<dyn Stream<Item = ()> + Send + Unpin>,
@@ -44,7 +46,7 @@ where
     R: Send + Sync + DeserializeOwned,
 {
     /// Creates a new watcher with the provided factory and filter id.
-    pub fn new<T: Into<U256>>(id: T, provider: &'a dyn Middleware) -> Self {
+    pub fn new<T: Into<U256>>(id: T, provider: &'a dyn BaseMiddleware) -> Self {
         Self {
             id: id.into(),
             interval: Box::new(interval(DEFAULT_POLL_INTERVAL)),
@@ -166,7 +168,7 @@ pub struct TransactionStream<'a, St> {
     /// Temporary buffered transaction that get started as soon as another future finishes.
     buffered: VecDeque<TxHash>,
     /// The provider that gets the transaction
-    provider: &'a dyn Middleware,
+    provider: &'a dyn BaseMiddleware,
     /// A stream of transaction hashes.
     stream: St,
     /// max allowed futures to execute at once.
@@ -175,7 +177,7 @@ pub struct TransactionStream<'a, St> {
 
 impl<'a, St> TransactionStream<'a, St> {
     /// Create a new `TransactionStream` instance
-    pub fn new(provider: &'a dyn Middleware, stream: St, max_concurrent: usize) -> Self {
+    pub fn new(provider: &'a dyn BaseMiddleware, stream: St, max_concurrent: usize) -> Self {
         Self {
             pending: Default::default(),
             buffered: Default::default(),

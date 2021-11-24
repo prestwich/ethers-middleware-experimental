@@ -10,9 +10,9 @@ pub mod transports;
 pub mod types;
 
 pub mod ens;
-pub mod filter_watcher;
-pub mod pending_escalator;
-pub mod pending_transaction;
+
+pub mod watchers;
+pub use watchers::*;
 
 // TODO: REMOVE FROM HERE
 

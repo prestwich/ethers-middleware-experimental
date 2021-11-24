@@ -17,7 +17,7 @@ use crate::{
     filter_watcher::{LogWatcher, NewBlockWatcher, PendingTransactionWatcher},
     pending_escalator::EscalatingPending,
     pending_transaction::PendingTransaction,
-    provider::RpcConnection,
+    provider::{PubSubConnection, RpcConnection},
 };
 
 /// infallible conversion of Bytes to Address/String
@@ -33,12 +33,15 @@ fn decode_bytes<T: Detokenize>(param: ParamType, bytes: Bytes) -> T {
 
 /// Exposes RPC methods shared by all clients
 #[async_trait]
-pub trait Middleware: Debug + Send + Sync {
+pub trait BaseMiddleware: Debug + Send + Sync {
     #[doc(hidden)]
-    fn inner(&self) -> &dyn Middleware;
+    fn inner_base(&self) -> &dyn BaseMiddleware;
 
     #[doc(hidden)]
     fn provider(&self) -> &dyn RpcConnection;
+
+    #[doc(hidden)]
+    fn pubsub_provider(&self) -> Option<&dyn PubSubConnection>;
 
     /// Return a default tx sender address for this provider
     fn default_sender(&self) -> Option<Address> {
@@ -47,12 +50,12 @@ pub trait Middleware: Debug + Send + Sync {
 
     /// Returns the current client version using the `web3_clientVersion` RPC.
     async fn client_version(&self) -> Result<String, RpcError> {
-        self.inner().client_version().await
+        self.inner_base().client_version().await
     }
 
     /// Gets the latest block number via the `eth_BlockNumber` API
     async fn get_block_number(&self) -> Result<U64, RpcError> {
-        self.inner().get_block_number().await
+        self.inner_base().get_block_number().await
     }
 
     /// Gets the block at `block_hash_or_number` (transaction hashes only)
@@ -60,7 +63,7 @@ pub trait Middleware: Debug + Send + Sync {
         &self,
         block_hash_or_number: BlockId,
     ) -> Result<Option<Block<TxHash>>, RpcError> {
-        self.inner().get_block(block_hash_or_number).await
+        self.inner_base().get_block(block_hash_or_number).await
     }
 
     /// Gets the block at `block_hash_or_number` (full transactions included)
@@ -68,12 +71,16 @@ pub trait Middleware: Debug + Send + Sync {
         &self,
         block_hash_or_number: BlockId,
     ) -> Result<Option<Block<Transaction>>, RpcError> {
-        self.inner().get_block_with_txs(block_hash_or_number).await
+        self.inner_base()
+            .get_block_with_txs(block_hash_or_number)
+            .await
     }
 
     /// Gets the block uncle count at `block_hash_or_number`
     async fn get_uncle_count(&self, block_hash_or_number: BlockId) -> Result<U256, RpcError> {
-        self.inner().get_uncle_count(block_hash_or_number).await
+        self.inner_base()
+            .get_uncle_count(block_hash_or_number)
+            .await
     }
 
     /// Gets the block uncle at `block_hash_or_number` and `idx`
@@ -82,7 +89,7 @@ pub trait Middleware: Debug + Send + Sync {
         block_hash_or_number: BlockId,
         idx: U64,
     ) -> Result<Option<Block<H256>>, RpcError> {
-        self.inner().get_uncle(block_hash_or_number, idx).await
+        self.inner_base().get_uncle(block_hash_or_number, idx).await
     }
 
     /// Gets the transaction with `transaction_hash`
@@ -90,7 +97,7 @@ pub trait Middleware: Debug + Send + Sync {
         &self,
         transaction_hash: TxHash,
     ) -> Result<Option<Transaction>, RpcError> {
-        self.inner().get_transaction(transaction_hash).await
+        self.inner_base().get_transaction(transaction_hash).await
     }
 
     /// Gets the transaction receipt with `transaction_hash`
@@ -98,7 +105,9 @@ pub trait Middleware: Debug + Send + Sync {
         &self,
         transaction_hash: TxHash,
     ) -> Result<Option<TransactionReceipt>, RpcError> {
-        self.inner().get_transaction_receipt(transaction_hash).await
+        self.inner_base()
+            .get_transaction_receipt(transaction_hash)
+            .await
     }
 
     /// Returns all receipts for a block.
@@ -109,17 +118,17 @@ pub trait Middleware: Debug + Send + Sync {
         &self,
         block: BlockNumber,
     ) -> Result<Vec<TransactionReceipt>, RpcError> {
-        self.inner().get_block_receipts(block).await
+        self.inner_base().get_block_receipts(block).await
     }
 
     /// Gets the current gas price as estimated by the node
     async fn gas_price(&self) -> Result<U256, RpcError> {
-        self.inner().gas_price().await
+        self.inner_base().gas_price().await
     }
 
     /// Gets the accounts on the node
     async fn accounts(&self) -> Result<Vec<Address>, RpcError> {
-        self.inner().accounts().await
+        self.inner_base().accounts().await
     }
 
     /// Returns the nonce of the address
@@ -128,7 +137,7 @@ pub trait Middleware: Debug + Send + Sync {
         from: Address,
         block: Option<BlockNumber>,
     ) -> Result<U256, RpcError> {
-        self.inner().get_transaction_count(from, block).await
+        self.inner_base().get_transaction_count(from, block).await
     }
 
     /// Returns the account's balance
@@ -137,13 +146,13 @@ pub trait Middleware: Debug + Send + Sync {
         from: Address,
         block: Option<BlockNumber>,
     ) -> Result<U256, RpcError> {
-        self.inner().get_balance(from, block).await
+        self.inner_base().get_balance(from, block).await
     }
 
     /// Returns the currently configured chain id, a value used in replay-protected
     /// transaction signing as introduced by EIP-155.
     async fn chain_id(&self) -> Result<U256, RpcError> {
-        self.inner().chain_id().await
+        self.inner_base().chain_id().await
     }
 
     /// Sends the read-only (constant) transaction to a single Ethereum node and return the result
@@ -154,7 +163,7 @@ pub trait Middleware: Debug + Send + Sync {
         tx: &TypedTransaction,
         block: Option<BlockNumber>,
     ) -> Result<Bytes, RpcError> {
-        self.inner().call(tx, block).await
+        self.inner_base().call(tx, block).await
     }
 
     /// Sends a transaction to a single Ethereum node and return the estimated amount of gas
@@ -162,7 +171,7 @@ pub trait Middleware: Debug + Send + Sync {
     /// gas will result in a transaction being rejected (while still consuming all provided
     /// gas).
     async fn estimate_gas(&self, tx: &TypedTransaction) -> Result<U256, RpcError> {
-        self.inner().estimate_gas(tx).await
+        self.inner_base().estimate_gas(tx).await
     }
 
     /// Create an EIP-2930 access list
@@ -171,7 +180,7 @@ pub trait Middleware: Debug + Send + Sync {
         tx: &TypedTransaction,
         block: Option<BlockNumber>,
     ) -> Result<AccessListWithGasUsed, RpcError> {
-        self.inner().create_access_list(tx, block).await
+        self.inner_base().create_access_list(tx, block).await
     }
 
     /// Sends the transaction to the entire Ethereum network and returns the transaction's hash
@@ -181,43 +190,43 @@ pub trait Middleware: Debug + Send + Sync {
         tx: &TypedTransaction,
         block: Option<BlockNumber>,
     ) -> Result<TxHash, RpcError> {
-        self.inner().send_transaction(tx, block).await
+        self.inner_base().send_transaction(tx, block).await
     }
 
     /// Send the raw RLP encoded transaction to the entire Ethereum network and returns the
     /// transaction's hash This will consume gas from the account that signed the transaction.
     async fn send_raw_transaction(&self, tx: Bytes) -> Result<TxHash, RpcError> {
-        self.inner().send_raw_transaction(tx).await
+        self.inner_base().send_raw_transaction(tx).await
     }
 
     /// Signs data using a specific account. This account needs to be unlocked.
     async fn sign(&self, from: Address, data: Bytes) -> Result<Signature, RpcError> {
-        self.inner().sign(from, data).await
+        self.inner_base().sign(from, data).await
     }
 
     /// Returns an array (possibly empty) of logs that match the filter
     async fn get_logs(&self, filter: &Filter) -> Result<Vec<Log>, RpcError> {
-        self.inner().get_logs(filter).await
+        self.inner_base().get_logs(filter).await
     }
 
     /// Create a new block filter for later polling.
     async fn new_block_filter(&self) -> Result<U256, RpcError> {
-        self.inner().new_block_filter().await
+        self.inner_base().new_block_filter().await
     }
 
     /// Create a new pending transaction filter for later polling.
     async fn new_pending_transaction_filter(&self) -> Result<U256, RpcError> {
-        self.inner().new_pending_transaction_filter().await
+        self.inner_base().new_pending_transaction_filter().await
     }
 
     /// Create a new log filter for later polling.
     async fn new_log_filter(&self, filter: &Filter) -> Result<U256, RpcError> {
-        self.inner().new_log_filter(filter).await
+        self.inner_base().new_log_filter(filter).await
     }
 
     #[doc(hidden)]
     async fn get_filter_changes(&self, id: U256) -> Result<Vec<Value>, RpcError> {
-        self.inner().get_filter_changes(id).await
+        self.inner_base().get_filter_changes(id).await
     }
 
     /// Poll a pending transaction filter for any changes
@@ -249,7 +258,7 @@ pub trait Middleware: Debug + Send + Sync {
 
     // /// Uninstall a block, log, or pending transaction filter on the RPC host
     async fn uninstall_filter(&self, id: U256) -> Result<bool, RpcError> {
-        self.inner().uninstall_filter(id).await
+        self.inner_base().uninstall_filter(id).await
     }
 
     /// Get the storage of an address for a particular slot location
@@ -259,12 +268,14 @@ pub trait Middleware: Debug + Send + Sync {
         location: H256,
         block: Option<BlockNumber>,
     ) -> Result<H256, RpcError> {
-        self.inner().get_storage_at(from, location, block).await
+        self.inner_base()
+            .get_storage_at(from, location, block)
+            .await
     }
 
     /// Returns the deployed code at a given address
     async fn get_code(&self, at: Address, block: Option<BlockNumber>) -> Result<Bytes, RpcError> {
-        self.inner().get_code(at, block).await
+        self.inner_base().get_code(at, block).await
     }
 
     /// Returns the EIP-1186 proof response
@@ -275,7 +286,7 @@ pub trait Middleware: Debug + Send + Sync {
         locations: Vec<H256>,
         block: Option<BlockNumber>,
     ) -> Result<EIP1186ProofResponse, RpcError> {
-        self.inner().get_proof(from, locations, block).await
+        self.inner_base().get_proof(from, locations, block).await
     }
 
     /// Return the eip1559 RPC Fee History object
@@ -285,7 +296,7 @@ pub trait Middleware: Debug + Send + Sync {
         last_block: BlockNumber,
         reward_percentiles: &[f64],
     ) -> Result<FeeHistory, RpcError> {
-        self.inner()
+        self.inner_base()
             .fee_history(block_count, last_block, reward_percentiles)
             .await
     }
@@ -293,9 +304,9 @@ pub trait Middleware: Debug + Send + Sync {
 
 /// Exposes geth-specific RPC methods
 #[async_trait]
-pub trait GethMiddleware: Middleware + Send + Sync {
+pub trait GethMiddleware: BaseMiddleware + Send + Sync {
     /// Upcast the `GethMiddleware` to a generic `Middleware`
-    fn as_middleware(&self) -> &dyn Middleware;
+    fn as_base_middleware(&self) -> &dyn BaseMiddleware;
 
     #[doc(hidden)]
     fn inner_geth(&self) -> &dyn GethMiddleware;
@@ -324,9 +335,9 @@ pub trait GethMiddleware: Middleware + Send + Sync {
 
 /// Exposes parity (openethereum)-specific RPC methods
 #[async_trait]
-pub trait ParityMiddleware: Middleware + Send + Sync {
+pub trait ParityMiddleware: BaseMiddleware + Send + Sync {
     /// Upcast the `ParityMiddleware` to a generic `Middleware`
-    fn as_middleware(&self) -> &dyn Middleware;
+    fn as_base_middleware(&self) -> &dyn BaseMiddleware;
 
     #[doc(hidden)]
     fn inner_parity(&self) -> &dyn ParityMiddleware;
@@ -396,19 +407,25 @@ pub trait ParityMiddleware: Middleware + Send + Sync {
 }
 
 #[async_trait]
-pub trait MiddlewareExt: Middleware + Send + Sync {
+pub trait Middleware: BaseMiddleware + GethMiddleware + ParityMiddleware + Send + Sync {
     /// Return an inner middleware, if any
-    fn inner_ext(&self) -> &dyn MiddlewareExt;
+    fn inner(&self) -> &dyn Middleware;
 
-    /// Upcast the `MiddlewareExt` to a generic `Middleware`
-    fn as_middleware(&self) -> &dyn Middleware;
+    /// Upcast the `Middleware` to a generic `BaseMiddleware`
+    fn as_base_middleware(&self) -> &dyn BaseMiddleware;
+
+    /// Upcast the `Middleware` to a `GethMiddleware`
+    fn as_geth_middleware(&self) -> &dyn GethMiddleware;
+
+    /// Upcast the `Middleware` to a `ParityMiddleware`
+    fn as_parity_middleware(&self) -> &dyn ParityMiddleware;
 
     async fn ens_resolve(
         &self,
         registry: Option<Address>,
         ens_name: &str,
     ) -> Result<Address, RpcError> {
-        self.inner_ext().ens_resolve(registry, ens_name).await
+        self.inner().ens_resolve(registry, ens_name).await
     }
 
     async fn ens_lookup(
@@ -416,7 +433,7 @@ pub trait MiddlewareExt: Middleware + Send + Sync {
         registry: Option<Address>,
         address: Address,
     ) -> Result<String, RpcError> {
-        self.inner_ext().ens_lookup(registry, address).await
+        self.inner().ens_lookup(registry, address).await
     }
 
     #[doc(hidden)]
@@ -465,7 +482,7 @@ pub trait MiddlewareExt: Middleware + Send + Sync {
         tx: &TypedTransaction,
         from: Address,
     ) -> Result<Signature, RpcError> {
-        self.inner_ext().sign_transaction(tx, from).await
+        self.inner().sign_transaction(tx, from).await
     }
 
     /// Sends the transaction to the entire Ethereum network and returns the
@@ -476,7 +493,7 @@ pub trait MiddlewareExt: Middleware + Send + Sync {
         tx: &TypedTransaction,
         block: Option<BlockNumber>,
     ) -> Result<PendingTransaction<'_>, RpcError> {
-        let this = self.as_middleware();
+        let this = Middleware::as_base_middleware(self);
 
         let hash = this.send_transaction(tx, block).await?;
         Ok(PendingTransaction::new(hash, this))
@@ -497,7 +514,7 @@ pub trait MiddlewareExt: Middleware + Send + Sync {
         escalations: usize,
         policy: EscalationPolicy,
     ) -> Result<EscalatingPending<'_>, RpcError> {
-        let this = self.as_middleware();
+        let this = Middleware::as_base_middleware(self);
         let /*mut*/ original = tx.clone();
 
         // TODO(James): fill_transaction
@@ -534,26 +551,26 @@ pub trait MiddlewareExt: Middleware + Send + Sync {
     /// returns the transaction's hash This will consume gas from the account
     /// that signed the transaction.
     async fn send_raw_transaction(&self, tx: Bytes) -> Result<PendingTransaction<'_>, RpcError> {
-        let this = self.as_middleware();
+        let this = Middleware::as_base_middleware(self);
         let hash = this.send_raw_transaction(tx).await?;
         Ok(PendingTransaction::new(hash, this))
     }
 
     /// Create a stream that repeatedly polls a log filter
     async fn watch_new_logs(&self, filter: &Filter) -> Result<LogWatcher, RpcError> {
-        let this = self.as_middleware();
+        let this = Middleware::as_base_middleware(self);
         Ok(LogWatcher::new(this.new_log_filter(filter).await?, this))
     }
 
     /// Create a stream that repeatedly polls a new block filter
     async fn watch_new_blocks(&self) -> Result<NewBlockWatcher, RpcError> {
-        let this = self.as_middleware();
+        let this = Middleware::as_base_middleware(self);
         Ok(NewBlockWatcher::new(this.new_block_filter().await?, this))
     }
 
     /// Create a stream that repeatedly polls a pending transaction filter
     async fn watch_new_pending_transactions(&self) -> Result<PendingTransactionWatcher, RpcError> {
-        let this = self.as_middleware();
+        let this = Middleware::as_base_middleware(self);
         Ok(PendingTransactionWatcher::new(
             this.new_pending_transaction_filter().await?,
             this,
@@ -563,36 +580,44 @@ pub trait MiddlewareExt: Middleware + Send + Sync {
 
 #[cfg(test)]
 mod test {
-    use super::Middleware;
-    use crate::provider::RpcConnection;
+    use super::BaseMiddleware;
+    use crate::provider::{PubSubConnection, RpcConnection};
 
     #[derive(Debug)]
     pub struct CompileCheck {
-        inner: Box<dyn Middleware>,
+        inner: Box<dyn BaseMiddleware>,
     }
 
-    impl Middleware for CompileCheck {
-        fn inner(&self) -> &dyn Middleware {
+    impl BaseMiddleware for CompileCheck {
+        fn inner_base(&self) -> &dyn BaseMiddleware {
             &*self.inner
         }
 
         fn provider(&self) -> &dyn RpcConnection {
-            self.inner().provider()
+            self.inner_base().provider()
+        }
+
+        fn pubsub_provider(&self) -> Option<&dyn PubSubConnection> {
+            self.inner_base().pubsub_provider()
         }
     }
 
     #[derive(Debug)]
     pub struct CompileCheckRef<'a> {
-        inner: &'a dyn Middleware,
+        inner: &'a dyn BaseMiddleware,
     }
 
-    impl<'a> Middleware for CompileCheckRef<'a> {
-        fn inner(&self) -> &dyn Middleware {
+    impl<'a> BaseMiddleware for CompileCheckRef<'a> {
+        fn inner_base(&self) -> &dyn BaseMiddleware {
             self.inner
         }
 
         fn provider(&self) -> &dyn RpcConnection {
-            self.inner().provider()
+            self.inner_base().provider()
+        }
+
+        fn pubsub_provider(&self) -> Option<&dyn PubSubConnection> {
+            self.inner_base().pubsub_provider()
         }
     }
 }

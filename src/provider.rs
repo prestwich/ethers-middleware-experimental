@@ -12,7 +12,7 @@ use async_trait::async_trait;
 
 use crate::{
     error::RpcError,
-    middleware::{GethMiddleware, Middleware, MiddlewareExt, ParityMiddleware},
+    middleware::{BaseMiddleware, GethMiddleware, Middleware, ParityMiddleware},
     rpc,
     types::{RawRequest, RawResponse, RequestParams},
 };
@@ -58,16 +58,23 @@ pub trait RpcConnection: Debug + Send + Sync {
 }
 
 #[async_trait]
-impl<T> Middleware for T
+pub trait PubSubConnection: RpcConnection + Debug + Send + Sync {}
+
+#[async_trait]
+impl<T> BaseMiddleware for T
 where
     T: RpcConnection,
 {
-    fn inner(&self) -> &dyn Middleware {
+    fn inner_base(&self) -> &dyn BaseMiddleware {
         self
     }
 
     fn provider(&self) -> &dyn RpcConnection {
         self
+    }
+
+    fn pubsub_provider(&self) -> Option<&dyn PubSubConnection> {
+        None
     }
 
     async fn client_version(&self) -> Result<String, RpcError> {
@@ -329,7 +336,7 @@ where
         self
     }
 
-    fn as_middleware(&self) -> &dyn Middleware {
+    fn as_base_middleware(&self) -> &dyn BaseMiddleware {
         self
     }
 
@@ -410,7 +417,7 @@ where
         self
     }
 
-    fn as_middleware(&self) -> &dyn Middleware {
+    fn as_base_middleware(&self) -> &dyn BaseMiddleware {
         self
     }
 
@@ -428,15 +435,23 @@ where
 }
 
 #[async_trait]
-impl<T> MiddlewareExt for T
+impl<T> Middleware for T
 where
     T: RpcConnection,
 {
-    fn inner_ext(&self) -> &dyn MiddlewareExt {
+    fn inner(&self) -> &dyn Middleware {
         self
     }
 
-    fn as_middleware(&self) -> &dyn Middleware {
+    fn as_base_middleware(&self) -> &dyn BaseMiddleware {
+        self
+    }
+
+    fn as_geth_middleware(&self) -> &dyn GethMiddleware {
+        self
+    }
+
+    fn as_parity_middleware(&self) -> &dyn ParityMiddleware {
         self
     }
 
@@ -478,13 +493,17 @@ mod test {
     struct DummyMiddleware;
 
     #[async_trait]
-    impl Middleware for DummyMiddleware {
-        fn inner(&self) -> &dyn Middleware {
+    impl BaseMiddleware for DummyMiddleware {
+        fn inner_base(&self) -> &dyn BaseMiddleware {
             todo!()
         }
 
         fn provider(&self) -> &dyn RpcConnection {
             todo!()
+        }
+
+        fn pubsub_provider(&self) -> Option<&dyn PubSubConnection> {
+            self.inner_base().pubsub_provider()
         }
 
         async fn get_block_number(&self) -> Result<U64, RpcError> {
@@ -498,7 +517,7 @@ mod test {
             .parse()
             .unwrap();
         dbg!(provider.get_block_number().await.unwrap());
-        let provider = Box::new(provider) as Box<dyn Middleware>;
+        let provider = Box::new(provider) as Box<dyn BaseMiddleware>;
         dbg!(provider.get_block_number().await.unwrap());
         let providers = vec![provider, Box::new(DummyMiddleware)];
 
