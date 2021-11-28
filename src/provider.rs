@@ -12,7 +12,7 @@ use async_trait::async_trait;
 
 use crate::{
     error::RpcError,
-    middleware::{BaseMiddleware, GethMiddleware, Middleware, ParityMiddleware},
+    middleware::{BaseMiddleware, GethMiddleware, Middleware, ParityMiddleware, PubSubMiddleware},
     rpc,
     types::{RawRequest, RawResponse, RequestParams},
 };
@@ -481,6 +481,31 @@ where
         _: Address,
     ) -> Result<Signature, RpcError> {
         Err(RpcError::SignerUnavailable)
+    }
+}
+
+#[async_trait]
+impl<T> PubSubMiddleware for T
+where
+    T: PubSubConnection,
+{
+    #[doc(hidden)]
+    fn pubsub_provider(&self) -> &dyn PubSubConnection {
+        self
+    }
+
+    #[doc(hidden)]
+    fn inner_pubsub(&self) -> &dyn PubSubMiddleware {
+        self
+    }
+
+    #[doc(hidden)]
+    fn as_middleware(&self) -> &dyn Middleware {
+        self
+    }
+
+    async fn unsubscribe(&self, subscription_id: U256) -> Result<bool, RpcError> {
+        rpc::dispatch_unsubscribe(self, &subscription_id.into()).await
     }
 }
 

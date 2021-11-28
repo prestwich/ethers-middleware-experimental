@@ -578,6 +578,22 @@ pub trait Middleware: BaseMiddleware + GethMiddleware + ParityMiddleware + Send 
     }
 }
 
+#[async_trait]
+pub trait PubSubMiddleware: Middleware + Send + Sync {
+    #[doc(hidden)]
+    fn pubsub_provider(&self) -> &dyn PubSubConnection;
+
+    #[doc(hidden)]
+    fn inner_pubsub(&self) -> &dyn PubSubMiddleware;
+
+    #[doc(hidden)]
+    fn as_middleware(&self) -> &dyn Middleware;
+
+    async fn unsubscribe(&self, subscription_id: U256) -> Result<bool, RpcError> {
+        self.inner_pubsub().unsubscribe(subscription_id).await
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::BaseMiddleware;

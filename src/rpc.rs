@@ -242,7 +242,7 @@ impl_rpc!(
     response: Vec<Trace>,
 );
 
-impl_rpc!("eth_unsubscribe", Unsubscribe, param: U256, response: bool,);
+impl_rpc!("eth_unsubscribe", Unsubscribe, param: U256, response: bool);
 
 impl_rpc!(
     "eth_feeHistory",
