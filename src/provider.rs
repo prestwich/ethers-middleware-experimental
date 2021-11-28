@@ -5,6 +5,7 @@ use ethers::{
         *,
     },
 };
+use futures_channel::mpsc::UnboundedReceiver;
 use serde_json::Value;
 use std::fmt::Debug;
 
@@ -42,7 +43,7 @@ async fn get_block_gen(
 
 #[async_trait]
 pub trait RpcConnection: Debug + Send + Sync {
-    async fn _request(&self, request: RawRequest<'_>) -> Result<RawResponse, RpcError>;
+    async fn _request(&self, request: RawRequest) -> Result<RawResponse, RpcError>;
 
     async fn request<T>(&self, params: T) -> Result<T::Response, RpcError>
     where
@@ -57,8 +58,17 @@ pub trait RpcConnection: Debug + Send + Sync {
     }
 }
 
-#[async_trait]
-pub trait PubSubConnection: RpcConnection + Debug + Send + Sync {}
+/// A Connection that supports real-time notifications, e.g. a WebSocket.
+///
+/// Users should never call functions on this trait directly, instead they
+/// should be accessed via the types in the `subscriptions` module
+pub trait PubSubConnection: RpcConnection + Send + Sync {
+    #[doc(hidden)]
+    fn close_listener(&self, id: U256) -> Result<(), RpcError>;
+
+    #[doc(hidden)]
+    fn install_listener(&self, id: U256) -> Result<UnboundedReceiver<Value>, RpcError>;
+}
 
 #[async_trait]
 impl<T> BaseMiddleware for T
@@ -529,6 +539,7 @@ where
     }
 
     async fn unsubscribe(&self, subscription_id: U256) -> Result<bool, RpcError> {
+        self.close_listener(subscription_id)?;
         rpc::dispatch_unsubscribe(self, &subscription_id.into()).await
     }
 }

@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use ethers::prelude::U256;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::Value;
 use std::fmt::{self, Debug};
@@ -10,8 +11,8 @@ fn null_params(value: &Value) -> bool {
 }
 
 #[derive(Serialize, Debug)]
-pub struct RawRequest<'a> {
-    method: &'a str,
+pub struct RawRequest {
+    method: &'static str,
     #[serde(skip_serializing_if = "null_params")]
     params: Value,
 }
@@ -53,6 +54,13 @@ impl RawResponse {
         !self.is_error()
     }
 
+    pub fn into_result(self) -> Result<Value, JsonRpcError> {
+        match self {
+            RawResponse::Success { result } => Ok(result),
+            RawResponse::Error { error } => Err(error),
+        }
+    }
+
     pub fn deserialize<R>(self) -> Result<R, RpcError>
     where
         R: DeserializeOwned,
@@ -65,11 +73,11 @@ impl RawResponse {
 }
 
 #[derive(Serialize, Debug)]
-pub struct JsonRpcRequest<'a> {
+pub struct JsonRpcRequest {
     pub(crate) id: u64,
     pub(crate) jsonrpc: &'static str,
     #[serde(flatten)]
-    pub(crate) request: RawRequest<'a>,
+    pub(crate) request: RawRequest,
 }
 
 #[derive(Deserialize, Debug)]
@@ -80,12 +88,26 @@ pub struct JsonRpcResponse {
     pub result: RawResponse,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+/// A JSON-RPC Notifcation
+pub struct JsonRpcNotification {
+    jsonrpc: String,
+    method: String,
+    pub params: Notification,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Notification {
+    pub subscription: U256,
+    pub result: Value,
+}
+
 #[async_trait]
 pub trait RequestParams: Serialize + Send + Sync + Debug {
     const METHOD: &'static str;
     type Response: DeserializeOwned + std::fmt::Debug;
 
-    fn to_raw_request(&self) -> RawRequest<'static> {
+    fn to_raw_request(&self) -> RawRequest {
         RawRequest {
             method: Self::METHOD,
             params: serde_json::to_value(self).expect("value ser doesn't fail"),

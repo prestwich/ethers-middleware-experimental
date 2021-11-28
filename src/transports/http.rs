@@ -31,7 +31,7 @@ impl Http {
 
 #[async_trait]
 impl RpcConnection for Http {
-    async fn _request(&self, request: RawRequest<'_>) -> Result<RawResponse, RpcError> {
+    async fn _request(&self, request: RawRequest) -> Result<RawResponse, RpcError> {
         let id = self.id.fetch_add(1, Ordering::SeqCst);
         let payload = JsonRpcRequest {
             id,

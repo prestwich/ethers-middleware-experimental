@@ -14,6 +14,8 @@ pub mod ens;
 pub mod watchers;
 pub use watchers::*;
 
+pub mod subscriptions;
+
 // TODO: REMOVE FROM HERE
 
 use error::RpcError;

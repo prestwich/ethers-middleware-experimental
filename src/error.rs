@@ -1,5 +1,7 @@
 use crate::types::JsonRpcError;
+use futures_channel::oneshot;
 use thiserror::Error;
+use tokio_tungstenite::tungstenite::protocol::CloseFrame;
 
 #[derive(Error, Debug)]
 pub enum RpcError {
@@ -25,13 +27,77 @@ pub enum RpcError {
     #[error("ens name not found: {0}")]
     EnsError(String),
 
+    /// A WebSocket transport error
+    #[error("{0}")]
+    WsError(#[from] WsError),
+
     /// Custom
     #[error("{0}")]
     CustomError(String),
 }
 
+#[derive(Error, Debug)]
+/// Error thrown when sending a WS message
+pub enum WsError {
+    /// Thrown if the websocket responds with binary data
+    #[error("Websocket responded with unexpected binary data")]
+    UnexpectedBinary(Vec<u8>),
+
+    /// Thrown if there's an error over the WS connection
+    #[error(transparent)]
+    #[cfg(not(target_arch = "wasm32"))]
+    InternalWsError(#[from] tungstenite::Error),
+
+    /// Thrown if there's an error over the WS connection
+    #[error(transparent)]
+    #[cfg(target_arch = "wasm32")]
+    InternalWsError(#[from] ws_stream_wasm::WsErr),
+
+    /// Channel Error
+    #[error("{0}")]
+    ChannelError(String),
+
+    /// Oneshot cancelled
+    #[error("{0}")]
+    Canceled(#[from] oneshot::Canceled),
+
+    /// Remote server sent a Close message
+    #[error("Websocket closed with info: {0:?}")]
+    #[cfg(not(target_arch = "wasm32"))]
+    WsClosed(CloseFrame<'static>),
+
+    /// Remote server sent a Close message
+    #[error("Websocket closed with info")]
+    #[cfg(target_arch = "wasm32")]
+    WsClosed,
+
+    /// Something caused the websocket to close
+    #[error("WebSocket connection closed unexpectedly")]
+    UnexpectedClose,
+}
+
 impl From<JsonRpcError> for RpcError {
     fn from(e: JsonRpcError) -> Self {
         RpcError::ErrorResponse(e)
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl From<tungstenite::Error> for RpcError {
+    fn from(e: tungstenite::Error) -> Self {
+        RpcError::WsError(WsError::InternalWsError(e))
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl From<ws_stream_wasm::WsErr> for RpcError {
+    fn from(e: ws_stream_wasm::WsErr) -> Self {
+        RpcError::WsError(WsError::InternalWsError(e))
+    }
+}
+
+impl From<oneshot::Canceled> for RpcError {
+    fn from(e: oneshot::Canceled) -> Self {
+        RpcError::WsError(WsError::Canceled(e))
     }
 }
