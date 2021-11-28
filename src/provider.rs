@@ -15,6 +15,7 @@ use crate::{
     error::RpcError,
     middleware::{BaseMiddleware, GethMiddleware, Middleware, ParityMiddleware, PubSubMiddleware},
     rpc,
+    subscriptions::{LogStream, NewBlockStream, PendingTransactionStream, SyncingStream},
     types::{Notification, RawRequest, RawResponse, RequestParams},
 };
 
@@ -532,6 +533,26 @@ where
 
     async fn subscribe_syncing(&self) -> Result<U256, RpcError> {
         rpc::dispatch_subscribe_syncing(self, &"syncing".to_owned().into()).await
+    }
+
+    async fn stream_new_heads(&self) -> Result<NewBlockStream, RpcError> {
+        let id = self.subscribe_new_heads().await?;
+        NewBlockStream::new(id, self)
+    }
+
+    async fn stream_logs(&self, filter: &Filter) -> Result<LogStream, RpcError> {
+        let id = self.subscribe_logs(filter).await?;
+        LogStream::new(id, self)
+    }
+
+    async fn stream_new_pending_transactions(&self) -> Result<PendingTransactionStream, RpcError> {
+        let id = self.subscribe_new_pending_transactions().await?;
+        PendingTransactionStream::new(id, self)
+    }
+
+    async fn stream_syncing(&self) -> Result<SyncingStream, RpcError> {
+        let id = self.subscribe_syncing().await?;
+        SyncingStream::new(id, self)
     }
 
     async fn unsubscribe(&self, subscription_id: U256) -> Result<bool, RpcError> {

@@ -121,3 +121,22 @@ pub trait RequestParams: Serialize + Send + Sync + Debug {
             .deserialize()
     }
 }
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct SyncDetails {
+    starting_block: u64,
+    current_block: u64,
+    highest_block: u64,
+    known_states: u64,
+    pulled_states: u64,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(untagged)]
+pub enum SyncData {
+    RawSyncing(bool),
+    RawStatus(SyncDetails),
+    TaggedSyncing { syncing: bool },
+    TaggedStatus { status: SyncDetails },
+}

@@ -18,6 +18,7 @@ use crate::{
     pending_escalator::EscalatingPending,
     pending_transaction::PendingTransaction,
     provider::{PubSubConnection, RpcConnection},
+    subscriptions::{LogStream, NewBlockStream, PendingTransactionStream, SyncingStream},
 };
 
 /// infallible conversion of Bytes to Address/String
@@ -602,6 +603,22 @@ pub trait PubSubMiddleware: Middleware + Send + Sync {
 
     async fn subscribe_syncing(&self) -> Result<U256, RpcError> {
         self.inner_pubsub().subscribe_syncing().await
+    }
+
+    async fn stream_new_heads(&self) -> Result<NewBlockStream, RpcError> {
+        self.inner_pubsub().stream_new_heads().await
+    }
+
+    async fn stream_logs(&self, filter: &Filter) -> Result<LogStream, RpcError> {
+        self.inner_pubsub().stream_logs(filter).await
+    }
+
+    async fn stream_new_pending_transactions(&self) -> Result<PendingTransactionStream, RpcError> {
+        self.inner_pubsub().stream_new_pending_transactions().await
+    }
+
+    async fn stream_syncing(&self) -> Result<SyncingStream, RpcError> {
+        self.inner_pubsub().stream_syncing().await
     }
 
     async fn unsubscribe(&self, subscription_id: U256) -> Result<bool, RpcError> {

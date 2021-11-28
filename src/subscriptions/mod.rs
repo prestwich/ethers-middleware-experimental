@@ -4,17 +4,25 @@ use std::{
     task::{self, Poll},
 };
 
-use ethers::prelude::U256;
+use ethers::prelude::{Block, Log, TxHash, U256};
 use futures_channel::mpsc::UnboundedReceiver;
 use futures_core::Stream;
 use pin_project::{pin_project, pinned_drop};
 use serde::de::DeserializeOwned;
 
-use crate::{error::RpcError, middleware::PubSubMiddleware, types::Notification};
+use crate::{
+    error::RpcError,
+    middleware::PubSubMiddleware,
+    types::{Notification, SyncData},
+};
+
+pub type NewBlockStream<'a> = SubscriptionStream<'a, Block<TxHash>>;
+pub type LogStream<'a> = SubscriptionStream<'a, Log>;
+pub type PendingTransactionStream<'a> = SubscriptionStream<'a, TxHash>;
+pub type SyncingStream<'a> = SubscriptionStream<'a, SyncData>;
 
 #[must_use = "subscriptions do nothing unless you stream them"]
 #[pin_project(PinnedDrop)]
-
 pub struct SubscriptionStream<'a, R>
 where
     R: DeserializeOwned,

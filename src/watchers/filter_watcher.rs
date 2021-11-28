@@ -26,6 +26,10 @@ enum FilterWatcherState<'a, R> {
     NextItem(IntoIter<R>),
 }
 
+pub type NewBlockWatcher<'a> = FilterWatcher<'a, H256>;
+pub type PendingTransactionWatcher<'a> = FilterWatcher<'a, TxHash>;
+pub type LogWatcher<'a> = FilterWatcher<'a, Log>;
+
 #[must_use = "filters do nothing unless you stream them"]
 #[pin_project]
 /// Streams data from an installed filter via `eth_getFilterChanges`
@@ -120,10 +124,6 @@ where
         Poll::Pending
     }
 }
-
-pub type NewBlockWatcher<'a> = FilterWatcher<'a, H256>;
-pub type PendingTransactionWatcher<'a> = FilterWatcher<'a, TxHash>;
-pub type LogWatcher<'a> = FilterWatcher<'a, Log>;
 
 impl<'a> PendingTransactionWatcher<'a> {
     /// Returns a stream that yields the `Transaction`s for the transaction hashes this stream
