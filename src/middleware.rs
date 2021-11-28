@@ -589,6 +589,24 @@ pub trait PubSubMiddleware: Middleware + Send + Sync {
     #[doc(hidden)]
     fn as_middleware(&self) -> &dyn Middleware;
 
+    async fn subscribe_new_heads(&self) -> Result<U256, RpcError> {
+        self.inner_pubsub().subscribe_new_heads().await
+    }
+
+    async fn subscribe_logs(&self, filter: &Filter) -> Result<U256, RpcError> {
+        self.inner_pubsub().subscribe_logs(filter).await
+    }
+
+    async fn subscribe_new_pending_transactions(&self) -> Result<U256, RpcError> {
+        self.inner_pubsub()
+            .subscribe_new_pending_transactions()
+            .await
+    }
+
+    async fn subscribe_syncing(&self) -> Result<U256, RpcError> {
+        self.inner_pubsub().subscribe_syncing().await
+    }
+
     async fn unsubscribe(&self, subscription_id: U256) -> Result<bool, RpcError> {
         self.inner_pubsub().unsubscribe(subscription_id).await
     }

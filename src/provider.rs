@@ -504,6 +504,30 @@ where
         self
     }
 
+    async fn subscribe_new_heads(&self) -> Result<U256, RpcError> {
+        rpc::dispatch_subscribe_heads(self, &"newHeads".to_owned().into()).await
+    }
+
+    async fn subscribe_logs(&self, filter: &Filter) -> Result<U256, RpcError> {
+        rpc::dispatch_subscribe_logs(
+            self,
+            &rpc::SubscribeLogsParams("logs".to_owned(), filter.clone()),
+        )
+        .await
+    }
+
+    async fn subscribe_new_pending_transactions(&self) -> Result<U256, RpcError> {
+        rpc::dispatch_subscribe_new_pending_transactions(
+            self,
+            &"newPendingTransactions".to_owned().into(),
+        )
+        .await
+    }
+
+    async fn subscribe_syncing(&self) -> Result<U256, RpcError> {
+        rpc::dispatch_subscribe_syncing(self, &"syncing".to_owned().into()).await
+    }
+
     async fn unsubscribe(&self, subscription_id: U256) -> Result<bool, RpcError> {
         rpc::dispatch_unsubscribe(self, &subscription_id.into()).await
     }

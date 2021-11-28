@@ -85,7 +85,7 @@ macro_rules! impl_rpc {
     ($method:literal, $name:ident, response: $resp:ty $(,)?) => {
         paste::paste! {
             #[allow(unused_imports)]
-            mod [<inner_ $method:snake>] {
+            mod [<inner_ $name:snake>] {
                 use super::*;
                 decl_rpc_param_type!($method, $name);
 
@@ -95,13 +95,13 @@ macro_rules! impl_rpc {
                 impl_rpc_params!($method, Params, Response);
                 impl_dispatch_method!($name, Response);
             }
-            pub use [<inner_ $method:snake>]::*;
+            pub use [<inner_ $name:snake>]::*;
         }
     };
 
     ($method:literal, $name:ident, response: { $( $resp:ident: $resp_ty:ty, )* $(,)?}) => {
         paste::paste! {
-            mod [<inner_ $method:snake>] {
+            mod [<inner_ $name:snake>] {
                 use super::*;
 
                 decl_rpc_param_type!($method, $name);
@@ -113,13 +113,13 @@ macro_rules! impl_rpc {
                 impl_rpc_params!($method, Params, Response);
                 impl_dispatch_method!($name, Response);
             }
-            pub use [<inner_ $method:snake>]::*;
+            pub use [<inner_ $name:snake>]::*;
         }
     };
 
     ($method:literal, $name:ident, params: [ $($param:ty),* ], response: $resp:ty $(,)?) => {
         paste::paste! {
-            mod [<inner_ $method:snake>] {
+            mod [<inner_ $name:snake>] {
                 use super::*;
                 decl_rpc_param_type!($method, $name, params: [ $($param),* ]);
 
@@ -129,13 +129,13 @@ macro_rules! impl_rpc {
                 impl_rpc_params!($method, Params, Response);
                 impl_dispatch_method!($name, Params, Response);
             }
-            pub use [<inner_ $method:snake>]::*;
+            pub use [<inner_ $name:snake>]::*;
         }
     };
 
     ($method:literal, $name:ident, params: [ $($param:ty),* ], response: { $( $resp:ident: $resp_ty:ty, )* } $(,)?) => {
         paste::paste! {
-            mod [<inner_ $method:snake>] {
+            mod [<inner_ $name:snake>] {
                 use super::*;
                 decl_rpc_param_type!($method, $name, params: [ $($param),* ]);
                 decl_rpc_response_type!($method, $name, { $( $resp: $resp_ty, )* } );
@@ -146,13 +146,13 @@ macro_rules! impl_rpc {
                 impl_rpc_params!($method, Params, Response);
                 impl_dispatch_method!($name, Params, Response);
             }
-            pub use [<inner_ $method:snake>]::*;
+            pub use [<inner_ $name:snake>]::*;
         }
     };
 
     ($method:literal, $name:ident, param: $param:ty, response: { $( $resp:ident: $resp_ty:ty, )* } $(,)?) => {
         paste::paste! {
-            mod [<inner_ $method:snake>] {
+            mod [<inner_ $name:snake>] {
                 use super::*;
 
                 decl_rpc_param_type!($method, $name, param: $param);
@@ -164,13 +164,13 @@ macro_rules! impl_rpc {
                 impl_rpc_params!($method, Params, Response);
                 impl_dispatch_method!($name, Params, Response);
             }
-            pub use [<inner_ $method:snake>]::*;
+            pub use [<inner_ $name:snake>]::*;
         }
     };
 
     ($method:literal, $name:ident, param: $param:ty, response: $resp:ty $(,)?) => {
         paste::paste! {
-            mod [<inner_ $method:snake>] {
+            mod [<inner_ $name:snake>] {
                 use super::*;
                 decl_rpc_param_type!($method, $name, param: $param);
 
@@ -180,7 +180,7 @@ macro_rules! impl_rpc {
                 impl_rpc_params!($method, Params, Response);
                 impl_dispatch_method!($name, Params, Response);
             }
-            pub use [<inner_ $method:snake>]::*;
+            pub use [<inner_ $name:snake>]::*;
         }
     };
 }

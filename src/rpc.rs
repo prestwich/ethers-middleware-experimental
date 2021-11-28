@@ -251,4 +251,32 @@ impl_rpc!(
     response: FeeHistory,
 );
 
+impl_rpc!(
+    "eth_subscribe",
+    SubscribeHeads,
+    param: String,
+    response: U256,
+);
+
+impl_rpc!(
+    "eth_subscribe",
+    SubscribeLogs,
+    params: [String, Filter],
+    response: U256,
+);
+
+impl_rpc!(
+    "eth_subscribe",
+    SubscribeNewPendingTransactions,
+    param: String,
+    response: U256,
+);
+
+impl_rpc!(
+    "eth_subscribe",
+    SubscribeSyncing,
+    param: String,
+    response: U256,
+);
+
 // TODO(James): eth_subscribe manual impls
