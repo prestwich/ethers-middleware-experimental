@@ -40,9 +40,6 @@ pub trait BaseMiddleware: Debug + Send + Sync {
     #[doc(hidden)]
     fn provider(&self) -> &dyn RpcConnection;
 
-    #[doc(hidden)]
-    fn pubsub_provider(&self) -> Option<&dyn PubSubConnection>;
-
     /// Return a default tx sender address for this provider
     fn default_sender(&self) -> Option<Address> {
         None
@@ -615,7 +612,7 @@ pub trait PubSubMiddleware: Middleware + Send + Sync {
 #[cfg(test)]
 mod test {
     use super::BaseMiddleware;
-    use crate::provider::{PubSubConnection, RpcConnection};
+    use crate::provider::RpcConnection;
 
     #[derive(Debug)]
     pub struct CompileCheck {
@@ -629,10 +626,6 @@ mod test {
 
         fn provider(&self) -> &dyn RpcConnection {
             self.inner_base().provider()
-        }
-
-        fn pubsub_provider(&self) -> Option<&dyn PubSubConnection> {
-            self.inner_base().pubsub_provider()
         }
     }
 
@@ -648,10 +641,6 @@ mod test {
 
         fn provider(&self) -> &dyn RpcConnection {
             self.inner_base().provider()
-        }
-
-        fn pubsub_provider(&self) -> Option<&dyn PubSubConnection> {
-            self.inner_base().pubsub_provider()
         }
     }
 }

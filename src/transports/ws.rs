@@ -8,7 +8,6 @@ use futures_util::{
     sink::{Sink, SinkExt},
     stream::{Fuse, Stream, StreamExt},
 };
-use serde_json::Value;
 use std::{
     collections::{btree_map::Entry, BTreeMap},
     fmt::{self, Debug},
@@ -22,7 +21,8 @@ use crate::{
     error::{RpcError, WsError},
     provider::{PubSubConnection, RpcConnection},
     types::{
-        JsonRpcError, JsonRpcNotification, JsonRpcRequest, JsonRpcResponse, RawRequest, RawResponse,
+        JsonRpcError, JsonRpcNotification, JsonRpcRequest, JsonRpcResponse, Notification,
+        RawRequest, RawResponse,
     },
 };
 
@@ -94,7 +94,7 @@ if_not_wasm! {
 }
 
 type ResponseChannel = oneshot::Sender<Result<RawResponse, JsonRpcError>>;
-type Subscription = mpsc::UnboundedSender<Value>;
+type Subscription = mpsc::UnboundedSender<Notification>;
 
 #[derive(Debug, serde::Deserialize)]
 #[serde(untagged)]
@@ -199,11 +199,11 @@ impl RpcConnection for Ws {
 }
 
 impl PubSubConnection for Ws {
-    fn close_listener(&self, id: U256) -> Result<(), RpcError> {
+    fn uninstall_listener(&self, id: U256) -> Result<(), RpcError> {
         Ok(self.send(Instruction::Unsubscribe { id: id.into() })?)
     }
 
-    fn install_listener(&self, id: U256) -> Result<UnboundedReceiver<Value>, RpcError> {
+    fn install_listener(&self, id: U256) -> Result<UnboundedReceiver<Notification>, RpcError> {
         let (sink, stream) = mpsc::unbounded();
 
         self.send(Instruction::Subscribe { id, sink })
@@ -343,7 +343,7 @@ where
             Ok(Incoming::Notification(notification)) => {
                 let id = notification.params.subscription;
                 if let Entry::Occupied(stream) = self.subscriptions.entry(id) {
-                    if let Err(err) = stream.get().unbounded_send(notification.params.result) {
+                    if let Err(err) = stream.get().unbounded_send(notification.params) {
                         if err.is_disconnected() {
                             // subscription channel was closed on the receiver end
                             stream.remove();
@@ -426,7 +426,7 @@ where
 #[cfg(not(target_arch = "wasm32"))]
 mod tests {
     use super::*;
-    use crate::middleware::BaseMiddleware;
+    use crate::middleware::{BaseMiddleware, PubSubMiddleware};
     use ethers::core::{
         types::{Block, TxHash, U256},
         utils::Ganache,
@@ -445,23 +445,22 @@ mod tests {
 
     #[tokio::test]
     async fn subscription() {
-        // let ganache = Ganache::new().block_time(1u64).spawn();
-        // let ws = Ws::connect(ganache.ws_endpoint()).await.unwrap();
+        let ganache = Ganache::new().block_time(1u64).spawn();
+        let ws = Ws::connect(ganache.ws_endpoint()).await.unwrap();
 
-        todo!()
-        // // Subscribing requires sending the sub request and then subscribing to
-        // // the returned sub_id
-        // let sub_id: U256 = ws.request("eth_subscribe", ["newHeads"]).await.unwrap();
-        // let mut stream = ws.subscribe(sub_id).unwrap();
+        // Subscribing requires sending the sub request and then subscribing to
+        // the returned sub_id
+        let sub_id: U256 = ws.subscribe_new_heads().await.unwrap();
+        let mut stream = ws.install_listener(sub_id).unwrap();
 
-        // let mut blocks = Vec::new();
-        // for _ in 0..3 {
-        //     let item = stream.next().await.unwrap();
-        //     let block = serde_json::from_value::<Block<TxHash>>(item).unwrap();
-        //     blocks.push(block.number.unwrap_or_default().as_u64());
-        // }
+        let mut blocks = Vec::new();
+        for _ in 0..3 {
+            let item = stream.next().await.unwrap();
+            let block = serde_json::from_value::<Block<TxHash>>(item.result).unwrap();
+            blocks.push(block.number.unwrap_or_default().as_u64());
+        }
 
-        // assert_eq!(sub_id, 1.into());
-        // assert_eq!(blocks, vec![1, 2, 3])
+        assert_eq!(sub_id, 1.into());
+        assert_eq!(blocks, vec![1, 2, 3])
     }
 }

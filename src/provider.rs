@@ -15,7 +15,7 @@ use crate::{
     error::RpcError,
     middleware::{BaseMiddleware, GethMiddleware, Middleware, ParityMiddleware, PubSubMiddleware},
     rpc,
-    types::{RawRequest, RawResponse, RequestParams},
+    types::{Notification, RawRequest, RawResponse, RequestParams},
 };
 
 async fn get_block_gen(
@@ -64,10 +64,10 @@ pub trait RpcConnection: Debug + Send + Sync {
 /// should be accessed via the types in the `subscriptions` module
 pub trait PubSubConnection: RpcConnection + Send + Sync {
     #[doc(hidden)]
-    fn close_listener(&self, id: U256) -> Result<(), RpcError>;
+    fn uninstall_listener(&self, id: U256) -> Result<(), RpcError>;
 
     #[doc(hidden)]
-    fn install_listener(&self, id: U256) -> Result<UnboundedReceiver<Value>, RpcError>;
+    fn install_listener(&self, id: U256) -> Result<UnboundedReceiver<Notification>, RpcError>;
 }
 
 #[async_trait]
@@ -81,10 +81,6 @@ where
 
     fn provider(&self) -> &dyn RpcConnection {
         self
-    }
-
-    fn pubsub_provider(&self) -> Option<&dyn PubSubConnection> {
-        None
     }
 
     async fn client_version(&self) -> Result<String, RpcError> {
@@ -539,7 +535,7 @@ where
     }
 
     async fn unsubscribe(&self, subscription_id: U256) -> Result<bool, RpcError> {
-        self.close_listener(subscription_id)?;
+        self.uninstall_listener(subscription_id)?;
         rpc::dispatch_unsubscribe(self, &subscription_id.into()).await
     }
 }
@@ -560,10 +556,6 @@ mod test {
 
         fn provider(&self) -> &dyn RpcConnection {
             todo!()
-        }
-
-        fn pubsub_provider(&self) -> Option<&dyn PubSubConnection> {
-            self.inner_base().pubsub_provider()
         }
 
         async fn get_block_number(&self) -> Result<U64, RpcError> {
