@@ -200,7 +200,7 @@ impl RpcConnection for Ws {
 
 impl PubSubConnection for Ws {
     fn uninstall_listener(&self, id: U256) -> Result<(), RpcError> {
-        Ok(self.send(Instruction::Unsubscribe { id: id.into() })?)
+        Ok(self.send(Instruction::Unsubscribe { id })?)
     }
 
     fn install_listener(&self, id: U256) -> Result<UnboundedReceiver<Notification>, RpcError> {

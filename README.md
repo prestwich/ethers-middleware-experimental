@@ -2,12 +2,13 @@
 
 - [x] Implement polling filters
   - [x] modify filter watchers
-- [ ] PubSub
-  - [ ] add new trait
+- [x] PubSub
+  - [x] add new traits
+  - [x] modify subscription stream
 - [ ] Tx Dispatch
   - [x] modify pending tx
   - [ ] fill_transaction
   - [ ] default sender
-- [ ] Middleware trait
+- [x] Middleware trait
   - [x] modify escalator
-  - [ ] ENS resolution
+  - [x] ENS resolution
