@@ -10,6 +10,7 @@ use crate::{
     networks::{Network, Txn},
 };
 
+#[derive(Debug)]
 pub struct Ethereum;
 
 impl Network for Ethereum {
@@ -119,6 +120,9 @@ impl<T> EthereumMiddleware for T where
 {
 }
 
-fn _compile_check(_: &dyn EthereumMiddleware) -> () {
+fn _compile_check<T>(_: &dyn EthereumMiddleware, _: &dyn Middleware<T>)
+where
+    T: Network,
+{
     todo!()
 }

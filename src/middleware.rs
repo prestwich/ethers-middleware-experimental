@@ -642,12 +642,18 @@ mod test {
     use crate::{networks::Ethereum, provider::RpcConnection, transports::http::Http};
 
     #[derive(Debug)]
-    pub struct CompileCheck {
-        inner: Box<dyn BaseMiddleware<Ethereum>>,
+    pub struct CompileCheck<N>
+    where
+        N: Network,
+    {
+        inner: Box<dyn BaseMiddleware<N>>,
     }
 
-    impl BaseMiddleware<Ethereum> for CompileCheck {
-        fn inner_base(&self) -> &dyn BaseMiddleware<Ethereum> {
+    impl<N> BaseMiddleware<N> for CompileCheck<N>
+    where
+        N: Network,
+    {
+        fn inner_base(&self) -> &dyn BaseMiddleware<N> {
             &*self.inner
         }
 
@@ -657,12 +663,18 @@ mod test {
     }
 
     #[derive(Debug)]
-    pub struct CompileCheckRef<'a> {
-        inner: &'a dyn BaseMiddleware<Ethereum>,
+    pub struct CompileCheckRef<'a, N>
+    where
+        N: Network,
+    {
+        inner: &'a dyn BaseMiddleware<N>,
     }
 
-    impl<'a> BaseMiddleware<Ethereum> for CompileCheckRef<'a> {
-        fn inner_base(&self) -> &dyn BaseMiddleware<Ethereum> {
+    impl<'a, N> BaseMiddleware<N> for CompileCheckRef<'a, N>
+    where
+        N: Network,
+    {
+        fn inner_base(&self) -> &dyn BaseMiddleware<N> {
             self.inner
         }
 
@@ -671,22 +683,15 @@ mod test {
         }
     }
 
-    pub trait Toast<T> {}
-
-    fn comp_check(t: &dyn Toast<Ethereum>) -> () {
-        println!("{}", 0);
-    }
-
-    struct Toaster<'a, T> {
-        thing: &'a dyn Toast<T>,
-    }
-
     #[derive(Debug)]
     struct DummyMiddleware;
 
     #[async_trait]
-    impl BaseMiddleware<Ethereum> for DummyMiddleware {
-        fn inner_base(&self) -> &dyn BaseMiddleware<Ethereum> {
+    impl<N> BaseMiddleware<N> for DummyMiddleware
+    where
+        N: Network,
+    {
+        fn inner_base(&self) -> &dyn BaseMiddleware<N> {
             todo!()
         }
 
@@ -695,24 +700,73 @@ mod test {
         }
 
         async fn get_block_number(&self) -> Result<U64, RpcError> {
-            Ok(0.into())
+            Ok(U64::zero())
+        }
+    }
+
+    #[async_trait]
+    impl<N> ParityMiddleware<N> for DummyMiddleware
+    where
+        N: Network,
+    {
+        fn inner_parity(&self) -> &dyn ParityMiddleware<N> {
+            self
+        }
+
+        fn as_base_middleware(&self) -> &dyn BaseMiddleware<N> {
+            self
+        }
+    }
+
+    #[async_trait]
+    impl<N> GethMiddleware<N> for DummyMiddleware
+    where
+        N: Network,
+    {
+        fn inner_geth(&self) -> &dyn GethMiddleware<N> {
+            self
+        }
+
+        fn as_base_middleware(&self) -> &dyn BaseMiddleware<N> {
+            self
+        }
+    }
+
+    #[async_trait]
+    impl<N> Middleware<N> for DummyMiddleware
+    where
+        N: Network,
+    {
+        fn inner(&self) -> &dyn Middleware<N> {
+            self
+        }
+
+        fn as_base_middleware(&self) -> &dyn BaseMiddleware<N> {
+            self
+        }
+
+        fn as_geth_middleware(&self) -> &dyn GethMiddleware<N> {
+            self
+        }
+
+        fn as_parity_middleware(&self) -> &dyn ParityMiddleware<N> {
+            self
         }
     }
 
     #[tokio::test]
     async fn it_makes_a_req() {
-        let provider: Http = "https://mainnet.infura.io/v3/5cfdec76313b457cb696ff1b89cee7ee"
-            .parse()
-            .unwrap();
-        dbg!(BaseMiddleware::<Ethereum>::get_block_number(&provider)
-            .await
-            .unwrap());
-        let provider = Box::new(provider) as Box<dyn BaseMiddleware<Ethereum>>;
-        dbg!(BaseMiddleware::<Ethereum>::get_block_number(&provider)
-            .await
-            .unwrap());
-        let providers = vec![provider, Box::new(DummyMiddleware)];
-
-        assert_eq!(providers[1].get_block_number().await.unwrap(), 0.into());
+        // let provider: Http = "https://mainnet.infura.io/v3/5cfdec76313b457cb696ff1b89cee7ee"
+        //     .parse()
+        //     .unwrap();
+        // dbg!("yolo");
+        // dbg!(BaseMiddleware::<Ethereum>::get_block_number(&provider)
+        //     .await
+        //     .unwrap());
+        // let provider: Box<dyn Middleware<_>> = Box::new(provider);
+        // dbg!(1);
+        let dummy: Box<dyn Middleware<Ethereum>> = Box::new(DummyMiddleware);
+        dbg!(dummy.get_block_number().await.unwrap());
+        assert_eq!(dummy.get_block_number().await.unwrap(), 0.into());
     }
 }

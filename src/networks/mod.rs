@@ -28,6 +28,6 @@ pub trait Txn: Debug + Clone + Send + Sync {
     fn sighash<T: Into<U64>>(&self, chain_id: T) -> H256;
 }
 
-pub trait Network: Send + Sync {
+pub trait Network: Send + Sync + Debug {
     type TransactionRequest: Txn;
 }
