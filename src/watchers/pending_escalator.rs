@@ -8,7 +8,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use crate::{error::RpcError, middleware::BaseMiddleware, Delay, PinBoxFut};
+use crate::{error::RpcError, middleware::BaseMiddleware, networks::Network, Delay, PinBoxFut};
 
 /// States for the EscalatingPending future
 enum EscalatorStates<'a> {
@@ -24,8 +24,11 @@ enum EscalatorStates<'a> {
 #[must_use]
 #[pin_project(project = PendingProj)]
 #[derive(Debug)]
-pub struct EscalatingPending<'a> {
-    provider: &'a dyn BaseMiddleware,
+pub struct EscalatingPending<'a, N>
+where
+    N: Network,
+{
+    provider: &'a dyn BaseMiddleware<N>,
     broadcast_interval: Duration,
     polling_interval: Duration,
     txns: Vec<Bytes>,
@@ -34,7 +37,10 @@ pub struct EscalatingPending<'a> {
     state: EscalatorStates<'a>,
 }
 
-impl<'a> EscalatingPending<'a> {
+impl<'a, N> EscalatingPending<'a, N>
+where
+    N: Network,
+{
     /// Instantiate a new EscalatingPending. This should only be called by the
     /// BaseMiddleware trait.
     ///
@@ -42,7 +48,7 @@ impl<'a> EscalatingPending<'a> {
     /// (this just makes writing the code easier, as we can use `pop()` a lot).
     ///
     /// TODO: consider deserializing and checking invariants (gas order, etc.)
-    pub(crate) fn new(provider: &'a dyn BaseMiddleware, mut txns: Vec<Bytes>) -> Self {
+    pub(crate) fn new(provider: &'a dyn BaseMiddleware<N>, mut txns: Vec<Bytes>) -> Self {
         if txns.is_empty() {
             panic!("bad args");
         }
@@ -147,7 +153,10 @@ macro_rules! poll_broadcast_fut {
     };
 }
 
-impl<'a> Future for EscalatingPending<'a> {
+impl<'a, N> Future for EscalatingPending<'a, N>
+where
+    N: Network,
+{
     type Output = Result<TransactionReceipt, RpcError>;
 
     fn poll(

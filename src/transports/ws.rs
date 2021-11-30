@@ -174,9 +174,7 @@ impl Ws {
     }
 
     fn send(&self, msg: Instruction) -> Result<(), WsError> {
-        self.instructions
-            .unbounded_send(msg)
-            .map_err(|err| WsError::ChannelError(format!("{:?}", err)))
+        Ok(self.instructions.unbounded_send(msg)?)
     }
 }
 
@@ -206,8 +204,7 @@ impl PubSubConnection for Ws {
     fn install_listener(&self, id: U256) -> Result<UnboundedReceiver<Notification>, RpcError> {
         let (sink, stream) = mpsc::unbounded();
 
-        self.send(Instruction::Subscribe { id, sink })
-            .map_err(|e| WsError::ChannelError(format!("{:?}", e)))?;
+        self.send(Instruction::Subscribe { id, sink })?;
         Ok(stream)
     }
 }
@@ -334,10 +331,14 @@ where
                 // Ignore deser errors
             }
             Ok(Incoming::Response(resp)) => {
-                if let Some(request) = self.pending.remove(&resp.id) {
-                    request
-                        .send(Ok(resp.result))
-                        .map_err(|e| WsError::ChannelError(format!("{:?}", e)))?;
+                let req_id = resp.id;
+                if let Some(request) = self.pending.remove(&req_id) {
+                    request.send(Ok(resp.result)).map_err(|_| {
+                        WsError::ChannelError(format!(
+                            "failed to return response via channel for id {}",
+                            req_id
+                        ))
+                    })?;
                 }
             }
             Ok(Incoming::Notification(notification)) => {
@@ -426,7 +427,10 @@ where
 #[cfg(not(target_arch = "wasm32"))]
 mod tests {
     use super::*;
-    use crate::middleware::{BaseMiddleware, PubSubMiddleware};
+    use crate::{
+        middleware::{BaseMiddleware, PubSubMiddleware},
+        networks::Ethereum,
+    };
     use ethers::core::{
         types::{Block, TxHash, U256},
         utils::Ganache,
@@ -437,9 +441,13 @@ mod tests {
         let ganache = Ganache::new().block_time(1u64).spawn();
         let ws = Ws::connect(ganache.ws_endpoint()).await.unwrap();
 
-        let block_num = ws.get_block_number().await.unwrap();
+        let block_num = BaseMiddleware::<Ethereum>::get_block_number(&ws)
+            .await
+            .unwrap();
         std::thread::sleep(std::time::Duration::new(3, 0));
-        let block_num2 = ws.get_block_number().await.unwrap();
+        let block_num2 = BaseMiddleware::<Ethereum>::get_block_number(&ws)
+            .await
+            .unwrap();
         assert!(block_num2 > block_num);
     }
 
@@ -450,8 +458,10 @@ mod tests {
 
         // Subscribing requires sending the sub request and then subscribing to
         // the returned sub_id
-        let sub_id: U256 = ws.subscribe_new_heads().await.unwrap();
-        let mut stream = ws.install_listener(sub_id).unwrap();
+        let sub_id: U256 = PubSubMiddleware::<Ethereum>::subscribe_new_heads(&ws)
+            .await
+            .unwrap();
+        let mut stream = PubSubConnection::install_listener(&ws, sub_id).unwrap();
 
         let mut blocks = Vec::new();
         for _ in 0..3 {

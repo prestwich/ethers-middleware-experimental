@@ -13,31 +13,34 @@ use serde::de::DeserializeOwned;
 use crate::{
     error::RpcError,
     middleware::PubSubMiddleware,
+    networks::Network,
     types::{Notification, SyncData},
 };
 
-pub type NewBlockStream<'a> = SubscriptionStream<'a, Block<TxHash>>;
-pub type LogStream<'a> = SubscriptionStream<'a, Log>;
-pub type PendingTransactionStream<'a> = SubscriptionStream<'a, TxHash>;
-pub type SyncingStream<'a> = SubscriptionStream<'a, SyncData>;
+pub type NewBlockStream<'a, N> = SubscriptionStream<'a, Block<TxHash>, N>;
+pub type LogStream<'a, N> = SubscriptionStream<'a, Log, N>;
+pub type PendingTransactionStream<'a, N> = SubscriptionStream<'a, TxHash, N>;
+pub type SyncingStream<'a, N> = SubscriptionStream<'a, SyncData, N>;
 
 #[must_use = "subscriptions do nothing unless you stream them"]
 #[pin_project(PinnedDrop)]
-pub struct SubscriptionStream<'a, R>
+pub struct SubscriptionStream<'a, R, N>
 where
     R: DeserializeOwned,
+    N: Network,
 {
     /// The subscription's installed id on the ethereum node
     pub id: U256,
-    provider: &'a dyn PubSubMiddleware,
+    provider: &'a dyn PubSubMiddleware<N>,
     #[pin]
     rx: UnboundedReceiver<Notification>,
     ret: PhantomData<R>,
 }
 
-impl<'a, R> SubscriptionStream<'a, R>
+impl<'a, R, N> SubscriptionStream<'a, R, N>
 where
     R: DeserializeOwned,
+    N: Network,
 {
     /// Creates a new subscription stream for the provided subscription id.
     ///
@@ -46,7 +49,7 @@ where
     /// Instantiating this directly with a known ID will likely cause any
     /// existing streams with that ID to end. To avoid this, start a new stream
     /// using [`Provider::subscribe`] instead of `SubscriptionStream::new`.
-    pub fn new(id: U256, provider: &'a dyn PubSubMiddleware) -> Result<Self, RpcError> {
+    pub fn new(id: U256, provider: &'a dyn PubSubMiddleware<N>) -> Result<Self, RpcError> {
         // Call the underlying PubsubClient's subscribe
         let rx = provider.pubsub_provider().install_listener(id)?;
         Ok(Self {
@@ -66,9 +69,10 @@ where
 // Each subscription item is a serde_json::Value which must be decoded to the
 // subscription's return type.
 // TODO: Can this be replaced with an `rx.map` in the constructor?
-impl<'a, R> Stream for SubscriptionStream<'a, R>
+impl<'a, R, N> Stream for SubscriptionStream<'a, R, N>
 where
     R: DeserializeOwned,
+    N: Network,
 {
     type Item = R;
 
@@ -85,9 +89,10 @@ where
 }
 
 #[pinned_drop]
-impl<R> PinnedDrop for SubscriptionStream<'_, R>
+impl<R, N> PinnedDrop for SubscriptionStream<'_, R, N>
 where
     R: DeserializeOwned,
+    N: Network,
 {
     fn drop(self: Pin<&mut Self>) {
         // on drop it removes the handler from the websocket so that it stops

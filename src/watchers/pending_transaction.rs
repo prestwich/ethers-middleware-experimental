@@ -12,7 +12,8 @@ use std::{
 };
 
 use crate::{
-    error::RpcError, interval, middleware::BaseMiddleware, Delay, PinBoxFut, DEFAULT_POLL_INTERVAL,
+    error::RpcError, interval, middleware::BaseMiddleware, networks::Network, Delay, PinBoxFut,
+    DEFAULT_POLL_INTERVAL,
 };
 
 /// A pending transaction is a transaction which has been submitted but is not yet mined.
@@ -21,17 +22,17 @@ use crate::{
 /// is 1, but may be adjusted with the `confirmations` method. If the transaction does not
 /// have enough confirmations or is not mined, the future will stay in the pending state.
 #[pin_project]
-pub struct PendingTransaction<'a> {
+pub struct PendingTransaction<'a, N> {
     tx_hash: TxHash,
     confirmations: usize,
-    provider: &'a dyn BaseMiddleware,
+    provider: &'a dyn BaseMiddleware<N>,
     state: PendingTxState<'a>,
     interval: Box<dyn Stream<Item = ()> + Send + Unpin>,
 }
 
-impl<'a> PendingTransaction<'a> {
+impl<'a, N: Network> PendingTransaction<'a, N> {
     /// Creates a new pending transaction poller from a hash and a provider
-    pub fn new(tx_hash: TxHash, provider: &'a dyn BaseMiddleware) -> Self {
+    pub fn new(tx_hash: TxHash, provider: &'a dyn BaseMiddleware<N>) -> Self {
         let delay = Box::pin(Delay::new(DEFAULT_POLL_INTERVAL));
         Self {
             tx_hash,
@@ -43,7 +44,7 @@ impl<'a> PendingTransaction<'a> {
     }
 
     /// Returns the Provider associated with the pending transaction
-    pub fn provider(&self) -> &dyn BaseMiddleware {
+    pub fn provider(&self) -> &dyn BaseMiddleware<N> {
         self.provider
     }
 
@@ -84,7 +85,7 @@ macro_rules! rewake_with_new_state_if {
     };
 }
 
-impl<'a> Future for PendingTransaction<'a> {
+impl<'a, N: Network> Future for PendingTransaction<'a, N> {
     type Output = Result<Option<TransactionReceipt>, RpcError>;
 
     fn poll(self: Pin<&mut Self>, ctx: &mut Context) -> Poll<Self::Output> {
@@ -226,7 +227,7 @@ impl<'a> Future for PendingTransaction<'a> {
     }
 }
 
-impl<'a> fmt::Debug for PendingTransaction<'a> {
+impl<'a, N: Network> fmt::Debug for PendingTransaction<'a, N> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("PendingTransaction")
             .field("tx_hash", &self.tx_hash)
@@ -236,21 +237,21 @@ impl<'a> fmt::Debug for PendingTransaction<'a> {
     }
 }
 
-impl<'a> PartialEq for PendingTransaction<'a> {
+impl<'a, N: Network> PartialEq for PendingTransaction<'a, N> {
     fn eq(&self, other: &Self) -> bool {
         self.tx_hash == other.tx_hash
     }
 }
 
-impl<'a> PartialEq<TxHash> for PendingTransaction<'a> {
+impl<'a, N: Network> PartialEq<TxHash> for PendingTransaction<'a, N> {
     fn eq(&self, other: &TxHash) -> bool {
         &self.tx_hash == other
     }
 }
 
-impl<'a> Eq for PendingTransaction<'a> {}
+impl<'a, N: Network> Eq for PendingTransaction<'a, N> {}
 
-impl<'a> Deref for PendingTransaction<'a> {
+impl<'a, N: Network> Deref for PendingTransaction<'a, N> {
     type Target = TxHash;
 
     fn deref(&self) -> &Self::Target {

@@ -12,3 +12,15 @@
 - [x] Middleware trait
   - [x] modify escalator
   - [x] ENS resolution
+- [ ] remaining transports
+  - [ ] ipc
+  - [ ] mock
+  - [ ] quorum
+  - [ ] retrying
+- [ ] renames
+  - [ ] `provider.rs` to `connection.rs`
+  - [ ] `transports/` to `connections/`
+
+## Stretch Goals
+
+- [ ] parameterize Middleware with `Network` trait

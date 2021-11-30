@@ -44,12 +44,12 @@ pub enum WsError {
     UnexpectedBinary(Vec<u8>),
 
     /// Thrown if there's an error over the WS connection
-    #[error(transparent)]
+    #[error("{0}")]
     #[cfg(not(target_arch = "wasm32"))]
     InternalWsError(#[from] tungstenite::Error),
 
     /// Thrown if there's an error over the WS connection
-    #[error(transparent)]
+    #[error("{0}")]
     #[cfg(target_arch = "wasm32")]
     InternalWsError(#[from] ws_stream_wasm::WsErr),
 
@@ -99,5 +99,11 @@ impl From<ws_stream_wasm::WsErr> for RpcError {
 impl From<oneshot::Canceled> for RpcError {
     fn from(e: oneshot::Canceled) -> Self {
         RpcError::WsError(WsError::Canceled(e))
+    }
+}
+
+impl<T> From<futures_channel::mpsc::TrySendError<T>> for WsError {
+    fn from(e: futures_channel::mpsc::TrySendError<T>) -> Self {
+        WsError::ChannelError(format!("{:?}", e))
     }
 }

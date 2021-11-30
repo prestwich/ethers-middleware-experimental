@@ -9,6 +9,8 @@ pub mod rpc;
 pub mod transports;
 pub mod types;
 
+pub mod networks;
+
 pub mod ens;
 
 pub mod watchers;

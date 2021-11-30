@@ -5,7 +5,10 @@ use ethers::{
     abi::{self, Detokenize, ParamType},
     prelude::{
         transaction::{eip2718::TypedTransaction, eip2930::AccessListWithGasUsed},
-        *,
+        Address, Block, BlockId, BlockNumber, BlockTrace, Bytes, EIP1186ProofResponse,
+        EscalationPolicy, FeeHistory, Filter, Log, Selector, Signature, Trace, TraceFilter,
+        TraceType, Transaction, TransactionReceipt, TxHash, TxpoolContent, TxpoolInspect,
+        TxpoolStatus, H256, U256, U64,
     },
 };
 use futures_util::future::join_all;
@@ -15,6 +18,7 @@ use crate::{
     ens,
     error::RpcError,
     filter_watcher::{LogWatcher, NewBlockWatcher, PendingTransactionWatcher},
+    networks::{Network, Txn},
     pending_escalator::EscalatingPending,
     pending_transaction::PendingTransaction,
     provider::{PubSubConnection, RpcConnection},
@@ -34,9 +38,9 @@ fn decode_bytes<T: Detokenize>(param: ParamType, bytes: Bytes) -> T {
 
 /// Exposes RPC methods shared by all clients
 #[async_trait]
-pub trait BaseMiddleware: Debug + Send + Sync {
+pub trait BaseMiddleware<N: Network>: Debug + Send + Sync {
     #[doc(hidden)]
-    fn inner_base(&self) -> &dyn BaseMiddleware;
+    fn inner_base(&self) -> &dyn BaseMiddleware<N>;
 
     #[doc(hidden)]
     fn provider(&self) -> &dyn RpcConnection;
@@ -185,7 +189,7 @@ pub trait BaseMiddleware: Debug + Send + Sync {
     /// This will consume gas from the account that signed the transaction.
     async fn send_transaction(
         &self,
-        tx: &TypedTransaction,
+        tx: &N::TransactionRequest,
         block: Option<BlockNumber>,
     ) -> Result<TxHash, RpcError> {
         self.inner_base().send_transaction(tx, block).await
@@ -302,12 +306,12 @@ pub trait BaseMiddleware: Debug + Send + Sync {
 
 /// Exposes geth-specific RPC methods
 #[async_trait]
-pub trait GethMiddleware: BaseMiddleware + Send + Sync {
+pub trait GethMiddleware<N: Network>: BaseMiddleware<N> + Send + Sync {
     /// Upcast the `GethMiddleware` to a generic `Middleware`
-    fn as_base_middleware(&self) -> &dyn BaseMiddleware;
+    fn as_base_middleware(&self) -> &dyn BaseMiddleware<N>;
 
     #[doc(hidden)]
-    fn inner_geth(&self) -> &dyn GethMiddleware;
+    fn inner_geth(&self) -> &dyn GethMiddleware<N>;
 
     /// Returns the details of all transactions currently pending for inclusion in the next
     /// block(s), as well as the ones that are being scheduled for future execution only.
@@ -333,12 +337,12 @@ pub trait GethMiddleware: BaseMiddleware + Send + Sync {
 
 /// Exposes parity (openethereum)-specific RPC methods
 #[async_trait]
-pub trait ParityMiddleware: BaseMiddleware + Send + Sync {
+pub trait ParityMiddleware<N: Network>: BaseMiddleware<N> + Send + Sync {
     /// Upcast the `ParityMiddleware` to a generic `Middleware`
-    fn as_base_middleware(&self) -> &dyn BaseMiddleware;
+    fn as_base_middleware(&self) -> &dyn BaseMiddleware<N>;
 
     #[doc(hidden)]
-    fn inner_parity(&self) -> &dyn ParityMiddleware;
+    fn inner_parity(&self) -> &dyn ParityMiddleware<N>;
 
     /// Executes the given call and returns a number of possible traces for it
     async fn trace_call(
@@ -405,18 +409,20 @@ pub trait ParityMiddleware: BaseMiddleware + Send + Sync {
 }
 
 #[async_trait]
-pub trait Middleware: BaseMiddleware + GethMiddleware + ParityMiddleware + Send + Sync {
+pub trait Middleware<N: Network>:
+    BaseMiddleware<N> + GethMiddleware<N> + ParityMiddleware<N> + Send + Sync
+{
     /// Return an inner middleware, if any
-    fn inner(&self) -> &dyn Middleware;
+    fn inner(&self) -> &dyn Middleware<N>;
 
     /// Upcast the `Middleware` to a generic `BaseMiddleware`
-    fn as_base_middleware(&self) -> &dyn BaseMiddleware;
+    fn as_base_middleware(&self) -> &dyn BaseMiddleware<N>;
 
     /// Upcast the `Middleware` to a `GethMiddleware`
-    fn as_geth_middleware(&self) -> &dyn GethMiddleware;
+    fn as_geth_middleware(&self) -> &dyn GethMiddleware<N>;
 
     /// Upcast the `Middleware` to a `ParityMiddleware`
-    fn as_parity_middleware(&self) -> &dyn ParityMiddleware;
+    fn as_parity_middleware(&self) -> &dyn ParityMiddleware<N>;
 
     async fn ens_resolve(
         &self,
@@ -435,15 +441,15 @@ pub trait Middleware: BaseMiddleware + GethMiddleware + ParityMiddleware + Send 
     }
 
     #[doc(hidden)]
-    async fn query_resolver<T>(
+    async fn query_resolver<D>(
         &self,
         registry: Option<Address>,
         param: ParamType,
         ens_name: &str,
         selector: Selector,
-    ) -> Result<T, RpcError>
+    ) -> Result<D, RpcError>
     where
-        T: Detokenize,
+        D: Detokenize,
         Self: Sized,
     {
         let ens_addr = match registry {
@@ -477,7 +483,7 @@ pub trait Middleware: BaseMiddleware + GethMiddleware + ParityMiddleware + Send 
     /// Sign a transaction, if a signer is available
     async fn sign_transaction(
         &self,
-        tx: &TypedTransaction,
+        tx: &N::TransactionRequest,
         from: Address,
     ) -> Result<Signature, RpcError> {
         self.inner().sign_transaction(tx, from).await
@@ -488,9 +494,9 @@ pub trait Middleware: BaseMiddleware + GethMiddleware + ParityMiddleware + Send 
     /// the transaction.
     async fn send_transaction(
         &self,
-        tx: &TypedTransaction,
+        tx: &N::TransactionRequest,
         block: Option<BlockNumber>,
-    ) -> Result<PendingTransaction<'_>, RpcError> {
+    ) -> Result<PendingTransaction<'_, N>, RpcError> {
         let this = Middleware::as_base_middleware(self);
 
         let hash = this.send_transaction(tx, block).await?;
@@ -508,10 +514,10 @@ pub trait Middleware: BaseMiddleware + GethMiddleware + ParityMiddleware + Send 
     /// 1000.pow(escalations))`
     async fn send_escalating<'a>(
         &'a self,
-        tx: &TypedTransaction,
+        tx: &N::TransactionRequest,
         escalations: usize,
         policy: EscalationPolicy,
-    ) -> Result<EscalatingPending<'_>, RpcError> {
+    ) -> Result<EscalatingPending<'_, N>, RpcError> {
         let this = Middleware::as_base_middleware(self);
         let /*mut*/ original = tx.clone();
 
@@ -548,26 +554,28 @@ pub trait Middleware: BaseMiddleware + GethMiddleware + ParityMiddleware + Send 
     /// Send the raw RLP encoded transaction to the entire Ethereum network and
     /// returns the transaction's hash This will consume gas from the account
     /// that signed the transaction.
-    async fn send_raw_transaction(&self, tx: Bytes) -> Result<PendingTransaction<'_>, RpcError> {
+    async fn send_raw_transaction(&self, tx: Bytes) -> Result<PendingTransaction<'_, N>, RpcError> {
         let this = Middleware::as_base_middleware(self);
         let hash = this.send_raw_transaction(tx).await?;
         Ok(PendingTransaction::new(hash, this))
     }
 
     /// Create a stream that repeatedly polls a log filter
-    async fn watch_new_logs(&self, filter: &Filter) -> Result<LogWatcher, RpcError> {
+    async fn watch_new_logs(&self, filter: &Filter) -> Result<LogWatcher<N>, RpcError> {
         let this = Middleware::as_base_middleware(self);
         Ok(LogWatcher::new(this.new_log_filter(filter).await?, this))
     }
 
     /// Create a stream that repeatedly polls a new block filter
-    async fn watch_new_blocks(&self) -> Result<NewBlockWatcher, RpcError> {
+    async fn watch_new_blocks(&self) -> Result<NewBlockWatcher<N>, RpcError> {
         let this = Middleware::as_base_middleware(self);
         Ok(NewBlockWatcher::new(this.new_block_filter().await?, this))
     }
 
     /// Create a stream that repeatedly polls a pending transaction filter
-    async fn watch_new_pending_transactions(&self) -> Result<PendingTransactionWatcher, RpcError> {
+    async fn watch_new_pending_transactions(
+        &self,
+    ) -> Result<PendingTransactionWatcher<N>, RpcError> {
         let this = Middleware::as_base_middleware(self);
         Ok(PendingTransactionWatcher::new(
             this.new_pending_transaction_filter().await?,
@@ -577,15 +585,15 @@ pub trait Middleware: BaseMiddleware + GethMiddleware + ParityMiddleware + Send 
 }
 
 #[async_trait]
-pub trait PubSubMiddleware: Middleware + Send + Sync {
+pub trait PubSubMiddleware<N: Network>: Middleware<N> + Send + Sync {
     #[doc(hidden)]
     fn pubsub_provider(&self) -> &dyn PubSubConnection;
 
     #[doc(hidden)]
-    fn inner_pubsub(&self) -> &dyn PubSubMiddleware;
+    fn inner_pubsub(&self) -> &dyn PubSubMiddleware<N>;
 
     #[doc(hidden)]
-    fn as_middleware(&self) -> &dyn Middleware;
+    fn as_middleware(&self) -> &dyn Middleware<N>;
 
     async fn subscribe_new_heads(&self) -> Result<U256, RpcError> {
         self.inner_pubsub().subscribe_new_heads().await
@@ -605,19 +613,21 @@ pub trait PubSubMiddleware: Middleware + Send + Sync {
         self.inner_pubsub().subscribe_syncing().await
     }
 
-    async fn stream_new_heads(&self) -> Result<NewBlockStream, RpcError> {
+    async fn stream_new_heads(&self) -> Result<NewBlockStream<N>, RpcError> {
         self.inner_pubsub().stream_new_heads().await
     }
 
-    async fn stream_logs(&self, filter: &Filter) -> Result<LogStream, RpcError> {
+    async fn stream_logs(&self, filter: &Filter) -> Result<LogStream<N>, RpcError> {
         self.inner_pubsub().stream_logs(filter).await
     }
 
-    async fn stream_new_pending_transactions(&self) -> Result<PendingTransactionStream, RpcError> {
+    async fn stream_new_pending_transactions(
+        &self,
+    ) -> Result<PendingTransactionStream<N>, RpcError> {
         self.inner_pubsub().stream_new_pending_transactions().await
     }
 
-    async fn stream_syncing(&self) -> Result<SyncingStream, RpcError> {
+    async fn stream_syncing(&self) -> Result<SyncingStream<N>, RpcError> {
         self.inner_pubsub().stream_syncing().await
     }
 
@@ -628,16 +638,16 @@ pub trait PubSubMiddleware: Middleware + Send + Sync {
 
 #[cfg(test)]
 mod test {
-    use super::BaseMiddleware;
-    use crate::provider::RpcConnection;
+    use super::*;
+    use crate::{networks::Ethereum, provider::RpcConnection, transports::http::Http};
 
     #[derive(Debug)]
     pub struct CompileCheck {
-        inner: Box<dyn BaseMiddleware>,
+        inner: Box<dyn BaseMiddleware<Ethereum>>,
     }
 
-    impl BaseMiddleware for CompileCheck {
-        fn inner_base(&self) -> &dyn BaseMiddleware {
+    impl BaseMiddleware<Ethereum> for CompileCheck {
+        fn inner_base(&self) -> &dyn BaseMiddleware<Ethereum> {
             &*self.inner
         }
 
@@ -648,16 +658,61 @@ mod test {
 
     #[derive(Debug)]
     pub struct CompileCheckRef<'a> {
-        inner: &'a dyn BaseMiddleware,
+        inner: &'a dyn BaseMiddleware<Ethereum>,
     }
 
-    impl<'a> BaseMiddleware for CompileCheckRef<'a> {
-        fn inner_base(&self) -> &dyn BaseMiddleware {
+    impl<'a> BaseMiddleware<Ethereum> for CompileCheckRef<'a> {
+        fn inner_base(&self) -> &dyn BaseMiddleware<Ethereum> {
             self.inner
         }
 
         fn provider(&self) -> &dyn RpcConnection {
             self.inner_base().provider()
         }
+    }
+
+    pub trait Toast<T> {}
+
+    fn comp_check(t: &dyn Toast<Ethereum>) -> () {
+        println!("{}", 0);
+    }
+
+    struct Toaster<'a, T> {
+        thing: &'a dyn Toast<T>,
+    }
+
+    #[derive(Debug)]
+    struct DummyMiddleware;
+
+    #[async_trait]
+    impl BaseMiddleware<Ethereum> for DummyMiddleware {
+        fn inner_base(&self) -> &dyn BaseMiddleware<Ethereum> {
+            todo!()
+        }
+
+        fn provider(&self) -> &dyn RpcConnection {
+            todo!()
+        }
+
+        async fn get_block_number(&self) -> Result<U64, RpcError> {
+            Ok(0.into())
+        }
+    }
+
+    #[tokio::test]
+    async fn it_makes_a_req() {
+        let provider: Http = "https://mainnet.infura.io/v3/5cfdec76313b457cb696ff1b89cee7ee"
+            .parse()
+            .unwrap();
+        dbg!(BaseMiddleware::<Ethereum>::get_block_number(&provider)
+            .await
+            .unwrap());
+        let provider = Box::new(provider) as Box<dyn BaseMiddleware<Ethereum>>;
+        dbg!(BaseMiddleware::<Ethereum>::get_block_number(&provider)
+            .await
+            .unwrap());
+        let providers = vec![provider, Box::new(DummyMiddleware)];
+
+        assert_eq!(providers[1].get_block_number().await.unwrap(), 0.into());
     }
 }

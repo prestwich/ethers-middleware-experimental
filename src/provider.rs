@@ -14,6 +14,7 @@ use async_trait::async_trait;
 use crate::{
     error::RpcError,
     middleware::{BaseMiddleware, GethMiddleware, Middleware, ParityMiddleware, PubSubMiddleware},
+    networks::Network,
     rpc,
     subscriptions::{LogStream, NewBlockStream, PendingTransactionStream, SyncingStream},
     types::{Notification, RawRequest, RawResponse, RequestParams},
@@ -72,11 +73,12 @@ pub trait PubSubConnection: RpcConnection + Send + Sync {
 }
 
 #[async_trait]
-impl<T> BaseMiddleware for T
+impl<T, N> BaseMiddleware<N> for T
 where
     T: RpcConnection,
+    N: Network,
 {
-    fn inner_base(&self) -> &dyn BaseMiddleware {
+    fn inner_base(&self) -> &dyn BaseMiddleware<N> {
         self
     }
 
@@ -241,14 +243,14 @@ where
 
     async fn send_transaction(
         &self,
-        tx: &TypedTransaction,
+        tx: &N::TransactionRequest,
         block: Option<BlockNumber>,
     ) -> Result<TxHash, RpcError> {
         let _block = block.unwrap_or(BlockNumber::Latest);
 
         // TODO: fill_transaction
-
-        rpc::dispatch_send_transaction(self, &tx.clone().into()).await
+        // rpc::dispatch_send_transaction(self, &tx.clone().into()).await
+        todo!()
     }
 
     async fn send_raw_transaction(&self, tx: Bytes) -> Result<TxHash, RpcError> {
@@ -335,15 +337,16 @@ where
 }
 
 #[async_trait]
-impl<T> ParityMiddleware for T
+impl<T, N> ParityMiddleware<N> for T
 where
     T: RpcConnection,
+    N: Network,
 {
-    fn inner_parity(&self) -> &dyn ParityMiddleware {
+    fn inner_parity(&self) -> &dyn ParityMiddleware<N> {
         self
     }
 
-    fn as_base_middleware(&self) -> &dyn BaseMiddleware {
+    fn as_base_middleware(&self) -> &dyn BaseMiddleware<N> {
         self
     }
 
@@ -416,15 +419,16 @@ where
 }
 
 #[async_trait]
-impl<T> GethMiddleware for T
+impl<T, N> GethMiddleware<N> for T
 where
     T: RpcConnection,
+    N: Network,
 {
-    fn inner_geth(&self) -> &dyn GethMiddleware {
+    fn inner_geth(&self) -> &dyn GethMiddleware<N> {
         self
     }
 
-    fn as_base_middleware(&self) -> &dyn BaseMiddleware {
+    fn as_base_middleware(&self) -> &dyn BaseMiddleware<N> {
         self
     }
 
@@ -442,23 +446,24 @@ where
 }
 
 #[async_trait]
-impl<T> Middleware for T
+impl<T, N> Middleware<N> for T
 where
     T: RpcConnection,
+    N: Network,
 {
-    fn inner(&self) -> &dyn Middleware {
+    fn inner(&self) -> &dyn Middleware<N> {
         self
     }
 
-    fn as_base_middleware(&self) -> &dyn BaseMiddleware {
+    fn as_base_middleware(&self) -> &dyn BaseMiddleware<N> {
         self
     }
 
-    fn as_geth_middleware(&self) -> &dyn GethMiddleware {
+    fn as_geth_middleware(&self) -> &dyn GethMiddleware<N> {
         self
     }
 
-    fn as_parity_middleware(&self) -> &dyn ParityMiddleware {
+    fn as_parity_middleware(&self) -> &dyn ParityMiddleware<N> {
         self
     }
 
@@ -467,8 +472,14 @@ where
         registry: Option<Address>,
         ens_name: &str,
     ) -> Result<Address, RpcError> {
-        self.query_resolver(registry, ParamType::Address, ens_name, ens::ADDR_SELECTOR)
-            .await
+        Middleware::<N>::query_resolver(
+            self,
+            registry,
+            ParamType::Address,
+            ens_name,
+            ens::ADDR_SELECTOR,
+        )
+        .await
     }
 
     async fn ens_lookup(
@@ -478,13 +489,19 @@ where
     ) -> Result<String, RpcError> {
         let ens_name = ens::reverse_address(address);
 
-        self.query_resolver(registry, ParamType::String, &ens_name, ens::NAME_SELECTOR)
-            .await
+        Middleware::<N>::query_resolver(
+            self,
+            registry,
+            ParamType::String,
+            &ens_name,
+            ens::NAME_SELECTOR,
+        )
+        .await
     }
 
     async fn sign_transaction(
         &self,
-        _: &TypedTransaction,
+        _: &N::TransactionRequest,
         _: Address,
     ) -> Result<Signature, RpcError> {
         Err(RpcError::SignerUnavailable)
@@ -492,9 +509,10 @@ where
 }
 
 #[async_trait]
-impl<T> PubSubMiddleware for T
+impl<T, N> PubSubMiddleware<N> for T
 where
     T: PubSubConnection,
+    N: Network,
 {
     #[doc(hidden)]
     fn pubsub_provider(&self) -> &dyn PubSubConnection {
@@ -502,12 +520,12 @@ where
     }
 
     #[doc(hidden)]
-    fn inner_pubsub(&self) -> &dyn PubSubMiddleware {
+    fn inner_pubsub(&self) -> &dyn PubSubMiddleware<N> {
         self
     }
 
     #[doc(hidden)]
-    fn as_middleware(&self) -> &dyn Middleware {
+    fn as_middleware(&self) -> &dyn Middleware<N> {
         self
     }
 
@@ -535,23 +553,25 @@ where
         rpc::dispatch_subscribe_syncing(self, &"syncing".to_owned().into()).await
     }
 
-    async fn stream_new_heads(&self) -> Result<NewBlockStream, RpcError> {
-        let id = self.subscribe_new_heads().await?;
+    async fn stream_new_heads(&self) -> Result<NewBlockStream<N>, RpcError> {
+        let id = PubSubMiddleware::<N>::subscribe_new_heads(self).await?;
         NewBlockStream::new(id, self)
     }
 
-    async fn stream_logs(&self, filter: &Filter) -> Result<LogStream, RpcError> {
-        let id = self.subscribe_logs(filter).await?;
+    async fn stream_logs(&self, filter: &Filter) -> Result<LogStream<N>, RpcError> {
+        let id = PubSubMiddleware::<N>::subscribe_logs(self, filter).await?;
         LogStream::new(id, self)
     }
 
-    async fn stream_new_pending_transactions(&self) -> Result<PendingTransactionStream, RpcError> {
-        let id = self.subscribe_new_pending_transactions().await?;
+    async fn stream_new_pending_transactions(
+        &self,
+    ) -> Result<PendingTransactionStream<N>, RpcError> {
+        let id = PubSubMiddleware::<N>::subscribe_new_pending_transactions(self).await?;
         PendingTransactionStream::new(id, self)
     }
 
-    async fn stream_syncing(&self) -> Result<SyncingStream, RpcError> {
-        let id = self.subscribe_syncing().await?;
+    async fn stream_syncing(&self) -> Result<SyncingStream<N>, RpcError> {
+        let id = PubSubMiddleware::<N>::subscribe_syncing(self).await?;
         SyncingStream::new(id, self)
     }
 
@@ -562,38 +582,4 @@ where
 }
 
 #[cfg(test)]
-mod test {
-    use super::*;
-    use crate::transports::http::Http;
-
-    #[derive(Debug)]
-    struct DummyMiddleware;
-
-    #[async_trait]
-    impl BaseMiddleware for DummyMiddleware {
-        fn inner_base(&self) -> &dyn BaseMiddleware {
-            todo!()
-        }
-
-        fn provider(&self) -> &dyn RpcConnection {
-            todo!()
-        }
-
-        async fn get_block_number(&self) -> Result<U64, RpcError> {
-            Ok(0.into())
-        }
-    }
-
-    #[tokio::test]
-    async fn it_makes_a_req() {
-        let provider: Http = "https://mainnet.infura.io/v3/5cfdec76313b457cb696ff1b89cee7ee"
-            .parse()
-            .unwrap();
-        dbg!(provider.get_block_number().await.unwrap());
-        let provider = Box::new(provider) as Box<dyn BaseMiddleware>;
-        dbg!(provider.get_block_number().await.unwrap());
-        let providers = vec![provider, Box::new(DummyMiddleware)];
-
-        assert_eq!(providers[1].get_block_number().await.unwrap(), 0.into());
-    }
-}
+mod test {}

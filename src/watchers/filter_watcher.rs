@@ -17,7 +17,8 @@ use std::{
 };
 
 use crate::{
-    error::RpcError, interval, middleware::BaseMiddleware, PinBoxFut, DEFAULT_POLL_INTERVAL,
+    error::RpcError, interval, middleware::BaseMiddleware, networks::Network, PinBoxFut,
+    DEFAULT_POLL_INTERVAL,
 };
 
 enum FilterWatcherState<'a, R> {
@@ -26,18 +27,18 @@ enum FilterWatcherState<'a, R> {
     NextItem(IntoIter<R>),
 }
 
-pub type NewBlockWatcher<'a> = FilterWatcher<'a, H256>;
-pub type PendingTransactionWatcher<'a> = FilterWatcher<'a, TxHash>;
-pub type LogWatcher<'a> = FilterWatcher<'a, Log>;
+pub type NewBlockWatcher<'a, N> = FilterWatcher<'a, H256, N>;
+pub type PendingTransactionWatcher<'a, N> = FilterWatcher<'a, TxHash, N>;
+pub type LogWatcher<'a, N> = FilterWatcher<'a, Log, N>;
 
 #[must_use = "filters do nothing unless you stream them"]
 #[pin_project]
 /// Streams data from an installed filter via `eth_getFilterChanges`
-pub struct FilterWatcher<'a, R> {
+pub struct FilterWatcher<'a, R, N> {
     /// The filter's installed id on the ethereum node
     pub id: U256,
 
-    provider: &'a dyn BaseMiddleware,
+    provider: &'a dyn BaseMiddleware<N>,
 
     // The polling interval
     interval: Box<dyn Stream<Item = ()> + Send + Unpin>,
@@ -45,12 +46,12 @@ pub struct FilterWatcher<'a, R> {
     state: FilterWatcherState<'a, R>,
 }
 
-impl<'a, R> FilterWatcher<'a, R>
+impl<'a, R, N> FilterWatcher<'a, R, N>
 where
     R: Send + Sync + DeserializeOwned,
 {
     /// Creates a new watcher with the provided factory and filter id.
-    pub fn new<T: Into<U256>>(id: T, provider: &'a dyn BaseMiddleware) -> Self {
+    pub fn new<T: Into<U256>>(id: T, provider: &'a dyn BaseMiddleware<N>) -> Self {
         Self {
             id: id.into(),
             interval: Box::new(interval(DEFAULT_POLL_INTERVAL)),
@@ -74,9 +75,10 @@ where
 
 // Pattern for flattening the returned Vec of filter changes taken from
 // https://github.com/tomusdrw/rust-web3/blob/f043b222744580bf4be043da757ab0b300c3b2da/src/api/eth_filter.rs#L50-L67
-impl<'a, R> Stream for FilterWatcher<'a, R>
+impl<'a, R, N> Stream for FilterWatcher<'a, R, N>
 where
     R: Serialize + Send + Sync + DeserializeOwned + Debug + 'a,
+    N: Network,
 {
     type Item = R;
 
@@ -125,14 +127,17 @@ where
     }
 }
 
-impl<'a> PendingTransactionWatcher<'a> {
+impl<'a, N> PendingTransactionWatcher<'a, N>
+where
+    N: Network,
+{
     /// Returns a stream that yields the `Transaction`s for the transaction hashes this stream
     /// yields.
     ///
     /// This internally calls `Provider::get_transaction` with every new transaction.
     /// No more than n futures will be buffered at any point in time, and less than n may also be
     /// buffered depending on the state of each future.
-    pub fn transactions_unordered(self, n: usize) -> TransactionStream<'a, Self> {
+    pub fn transactions_unordered(self, n: usize) -> TransactionStream<'a, Self, N> {
         TransactionStream::new(self.provider, self, n)
     }
 }
@@ -162,22 +167,28 @@ type TransactionResult = Result<Transaction, GetTransactionError>;
 
 /// Drains a stream of transaction hashes and yields entire `Transaction`.
 #[must_use = "streams do nothing unless polled"]
-pub struct TransactionStream<'a, St> {
+pub struct TransactionStream<'a, St, N>
+where
+    N: Network,
+{
     /// Currently running futures pending completion.
     pending: FuturesUnordered<TransactionFut<'a>>,
     /// Temporary buffered transaction that get started as soon as another future finishes.
     buffered: VecDeque<TxHash>,
     /// The provider that gets the transaction
-    provider: &'a dyn BaseMiddleware,
+    provider: &'a dyn BaseMiddleware<N>,
     /// A stream of transaction hashes.
     stream: St,
     /// max allowed futures to execute at once.
     max_concurrent: usize,
 }
 
-impl<'a, St> TransactionStream<'a, St> {
+impl<'a, St, N> TransactionStream<'a, St, N>
+where
+    N: Network,
+{
     /// Create a new `TransactionStream` instance
-    pub fn new(provider: &'a dyn BaseMiddleware, stream: St, max_concurrent: usize) -> Self {
+    pub fn new(provider: &'a dyn BaseMiddleware<N>, stream: St, max_concurrent: usize) -> Self {
         Self {
             pending: Default::default(),
             buffered: Default::default(),
@@ -201,9 +212,10 @@ impl<'a, St> TransactionStream<'a, St> {
     }
 }
 
-impl<'a, St> Stream for TransactionStream<'a, St>
+impl<'a, St, N> Stream for TransactionStream<'a, St, N>
 where
     St: Stream<Item = TxHash> + Unpin + 'a,
+    N: Network,
 {
     type Item = TransactionResult;
 
