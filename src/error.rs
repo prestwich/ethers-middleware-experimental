@@ -1,7 +1,7 @@
 use crate::types::JsonRpcError;
 use futures_channel::oneshot;
 use thiserror::Error;
-use tokio_tungstenite::tungstenite::protocol::CloseFrame;
+use tokio_tungstenite::tungstenite::{self, protocol::CloseFrame};
 
 #[derive(Error, Debug)]
 pub enum RpcError {

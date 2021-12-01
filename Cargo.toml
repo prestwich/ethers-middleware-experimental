@@ -6,25 +6,60 @@ edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[dependencies]
-async-trait = "0.1.51"
-ethers = { git = "https://github.com/gakonst/ethers-rs", branch = "master" }
-futures-channel = "0.3.18"
-futures-core = "0.3.17"
-futures-timer = "3.0.2"
-futures-util = "0.3.17"
-hex = "0.4.3"
-paste = "1.0.6"
-pin-project = "1.0.8"
-reqwest = "0.11.6"
-serde = "1.0.130"
-serde_json = "1.0.70"
-thiserror = "1.0.30"
-tokio = "1.14.0"
-tokio-tungstenite = "0.16.0"
-tracing = "0.1.29"
-tungstenite = "0.16.0"
-url = "2.2.2"
 
-[dev-dependencies]
-tokio = { version="1.14.0", features = ["macros"] }
+[dependencies]
+# ethers-core = { version = "^0.6.0", path = "../ethers-core", default-features = false }
+
+ethers = { path = "../ethers-rs" }
+paste = "1.0.6"
+async-trait = { version = "0.1.50", default-features = false }
+hex = { version = "0.4.3", default-features = false, features = ["std"] }
+reqwest = { version = "0.11.6", default-features = false, features = ["json"] }
+serde = { version = "1.0.124", default-features = false, features = ["derive"] }
+serde_json = { version = "1.0.64", default-features = false }
+thiserror = { version = "1.0.30", default-features = false }
+url = { version = "2.2.2", default-features = false }
+auto_impl = { version = "0.5.0", default-features = false }
+
+# required for implementing stream on the filters
+futures-core = { version = "0.3.16", default-features = false }
+futures-util = { version = "0.3.18" }
+futures-timer = { version = "3.0.2", default-features = false }
+futures-channel = { version = "0.3.16", default-features = false }
+pin-project = { version = "1.0.7", default-features = false }
+
+# tracing
+tracing = { version = "0.1.29", default-features = false }
+tracing-futures = { version = "0.2.5", default-features = false, features = ["std-future"] }
+
+bytes = { version  = "1.1.0", default-features = false, optional = true }
+
+# non-WASM deps
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+# tokio
+tokio-util = { version = "0.6.9", default-features = false, features = ["io"], optional = true }
+tokio = { version = "1.5", default-features = false, optional = true }
+tokio-tungstenite = { version = "0.15.0", default-features = false, features = ["connect"], optional = true }
+
+# WASM-only deps
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+ws_stream_wasm = "0.7"
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+web-sys = { version  = "0.3", features = ["console"] }
+wasm-timer = "0.2"
+# this is currently necessary for `wasm-timer::Delay` to work
+parking_lot = { version = "0.11", features = ["wasm-bindgen"] }
+
+# non-WASM dev-deps
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+tokio = { version = "1.5", default-features = false, features = ["rt", "macros"] }
+tempfile = "3.2.0"
+
+[features]
+default = ["ws", "ipc", "rustls"]
+ws = ["tokio", "tokio-tungstenite"]
+ipc = ["tokio", "tokio/io-util", "tokio-util", "bytes"]
+
+openssl = ["tokio-tungstenite/native-tls", "reqwest/native-tls"]
+rustls = ["tokio-tungstenite/rustls-tls", "reqwest/rustls-tls"]

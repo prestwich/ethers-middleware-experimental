@@ -3,8 +3,8 @@ use std::fmt::Debug;
 use async_trait::async_trait;
 use ethers::{
     abi::{self, Detokenize, ParamType},
+    core::types::transaction::{eip2718::TypedTransaction, eip2930::AccessListWithGasUsed},
     prelude::{
-        transaction::{eip2718::TypedTransaction, eip2930::AccessListWithGasUsed},
         Address, Block, BlockId, BlockNumber, BlockTrace, Bytes, EIP1186ProofResponse,
         EscalationPolicy, FeeHistory, Filter, Log, Selector, Signature, Trace, TraceFilter,
         TraceType, Transaction, TransactionReceipt, TxHash, TxpoolContent, TxpoolInspect,
@@ -15,7 +15,7 @@ use futures_util::future::join_all;
 use serde_json::Value;
 
 use crate::{
-    connection::{PubSubConnection, RpcConnection},
+    connections::{PubSubConnection, RpcConnection},
     ens,
     error::RpcError,
     filter_watcher::{LogWatcher, NewBlockWatcher, PendingTransactionWatcher},
@@ -637,7 +637,7 @@ pub trait PubSubMiddleware<N: Network>: Middleware<N> + Send + Sync {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{connection::RpcConnection, connections::http::Http, networks::Ethereum};
+    use crate::{connections::http::Http, connections::RpcConnection, networks::Ethereum};
 
     #[derive(Debug)]
     pub struct CompileCheck<N>

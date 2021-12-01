@@ -4,7 +4,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::Value;
 use std::fmt::{self, Debug};
 
-use crate::{connection::RpcConnection, error::RpcError};
+use crate::{connections::RpcConnection, error::RpcError};
 
 fn null_params(value: &Value) -> bool {
     matches!(value, Value::Null)

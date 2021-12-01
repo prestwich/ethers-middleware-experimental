@@ -18,7 +18,7 @@ use std::{
 };
 
 use crate::{
-    connection::{PubSubConnection, RpcConnection},
+    connections::{PubSubConnection, RpcConnection},
     error::{RpcError, WsError},
     types::{
         JsonRpcError, JsonRpcNotification, JsonRpcRequest, JsonRpcResponse, Notification,
@@ -423,7 +423,6 @@ where
 }
 
 #[cfg(test)]
-#[cfg(not(feature = "celo"))]
 #[cfg(not(target_arch = "wasm32"))]
 mod tests {
     use super::*;

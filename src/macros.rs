@@ -51,7 +51,7 @@ macro_rules! decl_rpc_param_type {
 macro_rules! impl_dispatch_method {
     ($name:ident, $resp:ty) => {
         paste::paste!{
-            pub(crate) async fn [<dispatch_ $name:snake>](provider: &dyn crate::connection::RpcConnection) -> Result<Response, crate::error::RpcError> {
+            pub(crate) async fn [<dispatch_ $name:snake>](provider: &dyn crate::connections::RpcConnection) -> Result<Response, crate::error::RpcError> {
                 use crate::types::RequestParams;
                 [<$name Params>].send_via(provider).await
             }
@@ -59,7 +59,7 @@ macro_rules! impl_dispatch_method {
     };
     ($name:ident, $params:ty, $resp:ty) => {
         paste::paste!{
-            pub(crate) async fn [<dispatch_ $name:snake>](provider: &dyn crate::connection::RpcConnection, params: &Params) -> Result<Response,crate::error::RpcError> {
+            pub(crate) async fn [<dispatch_ $name:snake>](provider: &dyn crate::connections::RpcConnection, params: &Params) -> Result<Response,crate::error::RpcError> {
                 use crate::types::RequestParams;
                 params.send_via(provider).await
             }
@@ -326,7 +326,7 @@ macro_rules! impl_network_middleware {
                 /// blockchain.
                 async fn call(
                     &self,
-                    tx: &TypedTransaction,
+                    tx: &<$network as crate::networks::Network>::TransactionRequest,
                     block: Option<ethers::prelude::BlockNumber>,
                 ) -> Result<Bytes, crate::error::RpcError> {
                     [<$network Middleware>]::as_base_middleware(self).call(tx, block).await
@@ -336,16 +336,16 @@ macro_rules! impl_network_middleware {
                 /// required (as a U256) to send it This is free, but only an estimate. Providing too little
                 /// gas will result in a transaction being rejected (while still consuming all provided
                 /// gas).
-                async fn estimate_gas(&self, tx: &TypedTransaction) -> Result<ethers::prelude::U256, crate::error::RpcError> {
+                async fn estimate_gas(&self, tx: &<$network as crate::networks::Network>::TransactionRequest) -> Result<ethers::prelude::U256, crate::error::RpcError> {
                     [<$network Middleware>]::as_base_middleware(self).estimate_gas(tx).await
                 }
 
                 /// Create an EIP-2930 access list
                 async fn create_access_list(
                     &self,
-                    tx: &TypedTransaction,
+                    tx: &<$network as crate::networks::Network>::TransactionRequest,
                     block: Option<ethers::prelude::BlockNumber>,
-                ) -> Result<ethers::prelude::transaction::eip2930::AccessListWithGasUsed, crate::error::RpcError> {
+                ) -> Result<ethers::core::types::transaction::eip2930::AccessListWithGasUsed, crate::error::RpcError> {
                     [<$network Middleware>]::as_base_middleware(self).create_access_list(tx, block).await
                 }
 

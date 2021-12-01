@@ -1,6 +1,6 @@
-use ethers::prelude::{
-    transaction::{eip2718::TypedTransaction, eip2930::AccessListWithGasUsed},
-    *,
+use ethers::{
+    core::types::transaction::{eip2718::TypedTransaction, eip2930::AccessListWithGasUsed},
+    prelude::*,
 };
 use serde_json::Value;
 

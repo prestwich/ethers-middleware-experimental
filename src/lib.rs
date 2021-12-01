@@ -1,7 +1,6 @@
 #[macro_use]
 pub mod macros;
 
-pub mod connection;
 pub mod connections;
 pub mod ens;
 pub mod error;
