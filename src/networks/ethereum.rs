@@ -95,34 +95,17 @@ impl Txn for TypedTransaction {
     }
 }
 
-pub trait EthereumMiddleware:
-    BaseMiddleware<Ethereum>
-    + GethMiddleware<Ethereum>
-    + ParityMiddleware<Ethereum>
-    + Middleware<Ethereum>
-    + Debug
-    + Send
-    + Sync
-{
-    // TODO: Delegate all methods of all middlewares
-    // TODO: Macro declaration of this trait
-    // TODO: Macro blanket impl of this trait
-}
+impl_network_middleware!(Ethereum);
 
-impl<T> EthereumMiddleware for T where
-    T: BaseMiddleware<Ethereum>
-        + GethMiddleware<Ethereum>
-        + ParityMiddleware<Ethereum>
-        + Middleware<Ethereum>
-        + Debug
-        + Send
-        + Sync
-{
-}
+mod test {
+    use super::EthereumMiddleware;
 
-fn _compile_check<T>(_: &dyn EthereumMiddleware, _: &dyn Middleware<T>)
-where
-    T: Network,
-{
-    todo!()
+    #[tokio::test]
+    async fn it_makes_a_req() {
+        let provider: crate::connections::http::Http =
+            "https://mainnet.infura.io/v3/5cfdec76313b457cb696ff1b89cee7ee"
+                .parse()
+                .unwrap();
+        dbg!(provider.get_block_number().await.unwrap());
+    }
 }

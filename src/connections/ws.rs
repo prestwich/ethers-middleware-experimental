@@ -18,8 +18,8 @@ use std::{
 };
 
 use crate::{
+    connection::{PubSubConnection, RpcConnection},
     error::{RpcError, WsError},
-    provider::{PubSubConnection, RpcConnection},
     types::{
         JsonRpcError, JsonRpcNotification, JsonRpcRequest, JsonRpcResponse, Notification,
         RawRequest, RawResponse,
@@ -107,7 +107,7 @@ enum Incoming {
 ///
 /// ```no_run
 /// # async fn foo() -> Result<(), Box<dyn std::error::Error>> {
-/// use ethers_middleware_experimental::transports::ws::Ws;
+/// use ethers_middleware_experimental::connections::ws::Ws;
 ///
 /// let ws = Ws::connect("wss://localhost:8545").await?;
 /// # Ok(())

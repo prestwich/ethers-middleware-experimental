@@ -7,8 +7,8 @@ use async_trait::async_trait;
 use reqwest::{Client, Url};
 
 use crate::{
+    connection::RpcConnection,
     error::RpcError,
-    provider::RpcConnection,
     types::{JsonRpcRequest, JsonRpcResponse, RawRequest, RawResponse},
 };
 

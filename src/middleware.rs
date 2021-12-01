@@ -15,13 +15,13 @@ use futures_util::future::join_all;
 use serde_json::Value;
 
 use crate::{
+    connection::{PubSubConnection, RpcConnection},
     ens,
     error::RpcError,
     filter_watcher::{LogWatcher, NewBlockWatcher, PendingTransactionWatcher},
     networks::{Network, Txn},
     pending_escalator::EscalatingPending,
     pending_transaction::PendingTransaction,
-    provider::{PubSubConnection, RpcConnection},
     subscriptions::{LogStream, NewBlockStream, PendingTransactionStream, SyncingStream},
 };
 
@@ -47,7 +47,7 @@ pub trait BaseMiddleware<N: Network>: Debug + Send + Sync {
 
     /// Return a default tx sender address for this provider
     fn default_sender(&self) -> Option<Address> {
-        None
+        self.inner_base().default_sender()
     }
 
     /// Returns the current client version using the `web3_clientVersion` RPC.
@@ -503,8 +503,6 @@ pub trait Middleware<N: Network>:
         Ok(PendingTransaction::new(hash, this))
     }
 
-    // TODO: ens resolver
-
     /// Send a transaction with a simple escalation policy.
     ///
     /// `policy` should be a boxed function that maps `original_gas_price`
@@ -639,7 +637,7 @@ pub trait PubSubMiddleware<N: Network>: Middleware<N> + Send + Sync {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{networks::Ethereum, provider::RpcConnection, transports::http::Http};
+    use crate::{connection::RpcConnection, connections::http::Http, networks::Ethereum};
 
     #[derive(Debug)]
     pub struct CompileCheck<N>
@@ -756,15 +754,13 @@ mod test {
 
     #[tokio::test]
     async fn it_makes_a_req() {
-        // let provider: Http = "https://mainnet.infura.io/v3/5cfdec76313b457cb696ff1b89cee7ee"
-        //     .parse()
-        //     .unwrap();
-        // dbg!("yolo");
-        // dbg!(BaseMiddleware::<Ethereum>::get_block_number(&provider)
-        //     .await
-        //     .unwrap());
-        // let provider: Box<dyn Middleware<_>> = Box::new(provider);
-        // dbg!(1);
+        let provider: Http = "https://mainnet.infura.io/v3/5cfdec76313b457cb696ff1b89cee7ee"
+            .parse()
+            .unwrap();
+        dbg!(BaseMiddleware::<Ethereum>::get_block_number(&provider)
+            .await
+            .unwrap());
+        let _provider: Box<dyn Middleware<Ethereum>> = Box::new(provider);
         let dummy: Box<dyn Middleware<Ethereum>> = Box::new(DummyMiddleware);
         dbg!(dummy.get_block_number().await.unwrap());
         assert_eq!(dummy.get_block_number().await.unwrap(), 0.into());
