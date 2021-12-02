@@ -39,9 +39,9 @@ impl RpcConnection for MockProvider {
         let mut responses = self.responses.lock().unwrap();
         let response = responses
             .pop_back()
-            .ok_or_else(|| RpcError::CustomError("empty mock responses".to_owned()))?;
+            .ok_or_else(|| RpcError::CustomError("empty responses".to_owned()))?;
 
-        Ok(serde_json::from_value(response)?)
+        Ok(RawResponse::Success { result: response })
     }
 }
 
@@ -85,50 +85,47 @@ impl MockProvider {
 #[cfg(test)]
 #[cfg(not(target_arch = "wasm32"))]
 mod tests {
-    // use super::*;
-    // use crate::middleware::Middleware;
-    // use ethers::core::types::U64;
+    use super::*;
+    use crate::connections::RpcConnection;
+    use ethers::core::types::U64;
 
-    // #[tokio::test]
-    // async fn pushes_request_and_response() {
-    //     let mock = MockProvider::new();
-    //     mock.push(U64::from(12)).unwrap();
-    //     let block: U64 = mock.request("eth_blockNumber", ()).await.unwrap();
-    //     mock.assert_request("eth_blockNumber", ()).unwrap();
-    //     assert_eq!(block.as_u64(), 12);
-    // }
+    #[tokio::test]
+    async fn pushes_request_and_response() {
+        let mock = MockProvider::new();
+        mock.push(U64::from(12)).unwrap();
+        let block: U64 = mock
+            .call_method("eth_blockNumber", ())
+            .await
+            .unwrap()
+            .deserialize()
+            .unwrap();
+        mock.assert_request("eth_blockNumber", ()).unwrap();
+        assert_eq!(block.as_u64(), 12);
+    }
 
-    // #[tokio::test]
-    // async fn empty_responses() {
-    //     let mock = MockProvider::new();
-    //     // tries to get a response without pushing a response
-    //     let err = mock
-    //         .request::<_, ()>("eth_blockNumber", ())
-    //         .await
-    //         .unwrap_err();
-    //     match err {
-    //         MockError::EmptyResponses => {}
-    //         _ => panic!("expected empty responses"),
-    //     };
-    // }
+    #[tokio::test]
+    async fn empty_responses() {
+        let mock = MockProvider::new();
+        // tries to get a response without pushing a response
+        let err = mock.call_method("eth_blockNumber", ()).await.unwrap_err();
+        match err {
+            RpcError::CustomError(e) => {
+                assert!(e.contains("empty responses"));
+            }
+            _ => panic!("expected empty responses"),
+        };
+    }
 
-    // #[tokio::test]
-    // async fn empty_requests() {
-    //     let mock = MockProvider::new();
-    //     // tries to assert a request without making one
-    //     let err = mock.assert_request("eth_blockNumber", ()).unwrap_err();
-    //     match err {
-    //         MockError::EmptyRequests => {}
-    //         _ => panic!("expected empty request"),
-    //     };
-    // }
-
-    // #[tokio::test]
-    // async fn composes_with_provider() {
-    //     let (provider, mock) = crate::Provider::mocked();
-
-    //     mock.push(U64::from(12)).unwrap();
-    //     let block = provider.get_block_number().await.unwrap();
-    //     assert_eq!(block.as_u64(), 12);
-    // }
+    #[tokio::test]
+    async fn empty_requests() {
+        let mock = MockProvider::new();
+        // tries to assert a request without making one
+        let err = mock.assert_request("eth_blockNumber", ()).unwrap_err();
+        match err {
+            RpcError::CustomError(e) => {
+                assert!(e.contains("empty requests"));
+            }
+            _ => panic!("expected empty requests"),
+        };
+    }
 }

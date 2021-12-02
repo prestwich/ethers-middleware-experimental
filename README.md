@@ -13,7 +13,7 @@
   - [x] modify escalator
   - [x] ENS resolution
 - [ ] remaining transports
-  - [ ] ipc
+  - [x] ipc
   - [ ] mock
   - [ ] quorum
   - [ ] retrying

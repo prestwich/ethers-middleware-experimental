@@ -17,6 +17,7 @@ use ethers::{
     },
 };
 use futures_channel::mpsc::UnboundedReceiver;
+use serde::Serialize;
 use serde_json::Value;
 use std::fmt::Debug;
 
@@ -57,6 +58,18 @@ async fn get_block_gen(
 #[async_trait]
 pub trait RpcConnection: Debug + Send + Sync {
     async fn _request(&self, request: RawRequest) -> Result<RawResponse, RpcError>;
+
+    async fn call_method<S>(&self, method: &'static str, params: S) -> Result<RawResponse, RpcError>
+    where
+        S: Serialize + Send + Sync,
+        Self: Sized,
+    {
+        let request = RawRequest {
+            method,
+            params: serde_json::to_value(&params)?,
+        };
+        self._request(request).await
+    }
 
     async fn request<T>(&self, params: T) -> Result<T::Response, RpcError>
     where
