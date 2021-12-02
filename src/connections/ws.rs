@@ -21,23 +21,10 @@ use crate::{
     connections::{PubSubConnection, RpcConnection},
     error::{RpcError, WsError},
     types::{
-        JsonRpcError, JsonRpcNotification, JsonRpcRequest, JsonRpcResponse, Notification,
-        RawRequest, RawResponse,
+        Instruction, JsonRpcError, JsonRpcNotification, JsonRpcRequest, JsonRpcResponse,
+        Notification, RawRequest, RawResponse,
     },
 };
-
-/// Instructions for the `WsServer`.
-enum Instruction {
-    /// JSON-RPC request
-    Request {
-        request: JsonRpcRequest,
-        sender: ResponseChannel,
-    },
-    /// Create a new subscription
-    Subscribe { id: U256, sink: Subscription },
-    /// Cancel an existing subscription
-    Unsubscribe { id: U256 },
-}
 
 // only used with WS
 macro_rules! if_wasm {

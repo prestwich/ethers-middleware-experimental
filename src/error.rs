@@ -31,6 +31,10 @@ pub enum RpcError {
     #[error("{0}")]
     WsError(#[from] WsError),
 
+    /// An IPC transport error
+    #[error("{0}")]
+    IpcError(#[from] IpcError),
+
     /// Custom
     #[error("{0}")]
     CustomError(String),
@@ -74,6 +78,25 @@ pub enum WsError {
     /// Something caused the websocket to close
     #[error("WebSocket connection closed unexpectedly")]
     UnexpectedClose,
+}
+
+#[derive(Error, Debug)]
+/// Error thrown when sending or receiving an IPC message.
+pub enum IpcError {
+    /// Thrown if deserialization failed
+    #[error(transparent)]
+    JsonError(#[from] serde_json::Error),
+
+    /// std IO error forwarding.
+    #[error(transparent)]
+    IoError(#[from] std::io::Error),
+
+    #[error("{0}")]
+    ChannelError(String),
+
+    /// Oneshot cancelled
+    #[error("{0}")]
+    Canceled(#[from] oneshot::Canceled),
 }
 
 impl From<JsonRpcError> for RpcError {

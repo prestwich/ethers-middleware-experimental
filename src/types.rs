@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use ethers::prelude::U256;
+use futures_channel::{mpsc, oneshot};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::Value;
 use std::fmt::{self, Debug};
@@ -139,4 +140,21 @@ pub enum SyncData {
     RawStatus(SyncDetails),
     TaggedSyncing { syncing: bool },
     TaggedStatus { status: SyncDetails },
+}
+
+pub(crate) type ResponseChannel = oneshot::Sender<Result<RawResponse, JsonRpcError>>;
+pub(crate) type Subscription = mpsc::UnboundedSender<Notification>;
+
+/// Instructions for the `WsServer` and `IpcServer`.
+#[derive(Debug)]
+pub(crate) enum Instruction {
+    /// JSON-RPC request
+    Request {
+        request: JsonRpcRequest,
+        sender: ResponseChannel,
+    },
+    /// Create a new subscription
+    Subscribe { id: U256, sink: Subscription },
+    /// Cancel an existing subscription
+    Unsubscribe { id: U256 },
 }
