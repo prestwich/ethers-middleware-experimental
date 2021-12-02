@@ -1,9 +1,11 @@
 //! [Ethereum Name Service](https://docs.ens.domains/) support
 //! Adapted from https://github.com/hhatto/rust-ens/blob/master/src/lib.rs
 use ethers::core::{
-    types::{Address, NameOrAddress, Selector, TransactionRequest, H160, H256, U256},
+    types::{Address, NameOrAddress, Selector, H160, H256, U256},
     utils::keccak256,
 };
+
+use crate::{Network, Txn};
 
 /// ENS registry address (`0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e`)
 /// Same on Rinkeby, Goerli, and Ropsten
@@ -33,28 +35,31 @@ pub const ADDR_SELECTOR: Selector = [59, 59, 87, 222];
 pub const NAME_SELECTOR: Selector = [105, 31, 52, 49];
 
 /// Returns a transaction request for calling the `resolver` method on the ENS server
-pub fn get_resolver<T: Into<Address>>(ens_address: T, name: &str) -> TransactionRequest {
+pub fn get_resolver<N: Network, T: Into<Address>>(
+    ens_address: T,
+    name: &str,
+) -> N::TransactionRequest {
     // keccak256('resolver(bytes32)')
     let data = [&RESOLVER[..], &namehash(name).0].concat();
-    TransactionRequest {
-        data: Some(data.into()),
-        to: Some(NameOrAddress::Address(ens_address.into())),
-        ..Default::default()
-    }
+
+    let mut t: N::TransactionRequest = Default::default();
+    t.set_data(data.into());
+    t.set_to(NameOrAddress::Address(ens_address.into()));
+    t
 }
 
 /// Returns a transaction request for calling
-pub fn resolve<T: Into<Address>>(
+pub fn resolve<N: Network, T: Into<Address>>(
     resolver_address: T,
     selector: Selector,
     name: &str,
-) -> TransactionRequest {
+) -> N::TransactionRequest {
     let data = [&selector[..], &namehash(name).0].concat();
-    TransactionRequest {
-        data: Some(data.into()),
-        to: Some(NameOrAddress::Address(resolver_address.into())),
-        ..Default::default()
-    }
+
+    let mut t: N::TransactionRequest = Default::default();
+    t.set_data(data.into());
+    t.set_to(NameOrAddress::Address(resolver_address.into()));
+    t
 }
 
 /// Returns the reverse-registrar name of an address.

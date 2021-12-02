@@ -8,6 +8,7 @@ use std::fmt::Debug;
 use crate::{
     middleware::{BaseMiddleware, GethMiddleware, Middleware, ParityMiddleware},
     networks::{Network, Txn},
+    Eip1559Fees,
 };
 
 #[derive(Debug)]
@@ -18,6 +19,35 @@ impl Network for Ethereum {
 }
 
 impl Txn for TypedTransaction {
+    fn recommend_1559(&self) -> bool {
+        true
+    }
+
+    fn get_1559_fees(&self) -> crate::Eip1559Fees {
+        match self {
+            TypedTransaction::Eip1559(tx) => Eip1559Fees {
+                max_fee_per_gas: tx.max_fee_per_gas,
+                max_priority_fee_per_gas: tx.max_priority_fee_per_gas,
+            },
+            _ => Eip1559Fees::default(),
+        }
+    }
+
+    fn set_1559_fees(&mut self, fees: &Eip1559Fees) {
+        match self {
+            TypedTransaction::Eip1559(tx) => {
+                if fees.max_fee_per_gas.is_some() {
+                    tx.max_fee_per_gas = fees.max_fee_per_gas;
+                }
+
+                if fees.max_priority_fee_per_gas.is_some() {
+                    tx.max_priority_fee_per_gas = fees.max_priority_fee_per_gas;
+                }
+            }
+            _ => {}
+        }
+    }
+
     fn from(&self) -> Option<&Address> {
         TypedTransaction::from(self)
     }
@@ -98,10 +128,9 @@ impl Txn for TypedTransaction {
 impl_network_middleware!(Ethereum);
 
 mod test {
-    use super::EthereumMiddleware;
-
     #[tokio::test]
     async fn it_makes_a_req() {
+        use super::EthereumMiddleware;
         let provider: crate::connections::http::Http =
             "https://mainnet.infura.io/v3/5cfdec76313b457cb696ff1b89cee7ee"
                 .parse()

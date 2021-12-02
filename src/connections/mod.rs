@@ -5,6 +5,10 @@ use ethers::{
     abi::ParamType,
     core::types::transaction::{eip2718::TypedTransaction, eip2930::AccessListWithGasUsed},
     prelude::*,
+    utils::{
+        eip1559_default_estimator, EIP1559_FEE_ESTIMATION_PAST_BLOCKS,
+        EIP1559_FEE_ESTIMATION_REWARD_PERCENTILE,
+    },
 };
 use futures_channel::mpsc::UnboundedReceiver;
 use serde_json::Value;
@@ -215,31 +219,34 @@ where
     /// blockchain.
     async fn call(
         &self,
-        tx: &TypedTransaction,
+        tx: &N::TransactionRequest,
         block: Option<BlockNumber>,
     ) -> Result<Bytes, RpcError> {
         let block = block.unwrap_or(BlockNumber::Latest);
-        rpc::dispatch_call(self, &rpc::CallParams(tx.clone(), block)).await
+        rpc::dispatch_call(self, &rpc::CallParams(serde_json::to_value(tx)?, block)).await
     }
 
     /// Sends a transaction to a single Ethereum node and return the estimated amount of gas
     /// required (as a U256) to send it This is free, but only an estimate. Providing too little
     /// gas will result in a transaction being rejected (while still consuming all provided
     /// gas).
-    async fn estimate_gas(&self, tx: &TypedTransaction) -> Result<U256, RpcError> {
-        rpc::dispatch_estimate_gas(self, &tx.clone().into()).await
+    async fn estimate_gas(&self, tx: &N::TransactionRequest) -> Result<U256, RpcError> {
+        rpc::dispatch_estimate_gas(self, &serde_json::to_value(tx)?.into()).await
     }
 
     /// Create an EIP-2930 access list
     async fn create_access_list(
         &self,
-        tx: &TypedTransaction,
+        tx: &N::TransactionRequest,
         block: Option<BlockNumber>,
     ) -> Result<AccessListWithGasUsed, RpcError> {
         let block = block.unwrap_or(BlockNumber::Latest);
 
-        rpc::dispatch_create_access_list(self, &rpc::CreateAccessListParams(tx.clone(), block))
-            .await
+        rpc::dispatch_create_access_list(
+            self,
+            &rpc::CreateAccessListParams(serde_json::to_value(tx)?, block),
+        )
+        .await
     }
 
     async fn send_transaction(
@@ -250,8 +257,8 @@ where
         let _block = block.unwrap_or(BlockNumber::Latest);
 
         // TODO: fill_transaction
-        // rpc::dispatch_send_transaction(self, &tx.clone().into()).await
-        todo!()
+        rpc::dispatch_send_transaction(self, &serde_json::to_value(tx)?.into()).await
+        // todo!()
     }
 
     async fn send_raw_transaction(&self, tx: Bytes) -> Result<TxHash, RpcError> {
@@ -498,6 +505,36 @@ where
             ens::NAME_SELECTOR,
         )
         .await
+    }
+
+    async fn estimate_eip1559_fees(
+        &self,
+        estimator: Option<fn(U256, Vec<Vec<U256>>) -> (U256, U256)>,
+    ) -> Result<(U256, U256), RpcError> {
+        let this = Middleware::<N>::as_base_middleware(self);
+        let base_fee_per_gas = this
+            .get_block(BlockNumber::Latest.into())
+            .await?
+            .ok_or_else(|| RpcError::CustomError("Latest block not found".into()))?
+            .base_fee_per_gas
+            .ok_or_else(|| RpcError::CustomError("EIP-1559 not activated".into()))?;
+
+        let fee_history = this
+            .fee_history(
+                EIP1559_FEE_ESTIMATION_PAST_BLOCKS.into(),
+                BlockNumber::Latest,
+                &[EIP1559_FEE_ESTIMATION_REWARD_PERCENTILE],
+            )
+            .await?;
+
+        // use the provided fee estimator function, or fallback to the default implementation.
+        let (max_fee_per_gas, max_priority_fee_per_gas) = if let Some(es) = estimator {
+            es(base_fee_per_gas, fee_history.reward)
+        } else {
+            eip1559_default_estimator(base_fee_per_gas, fee_history.reward)
+        };
+
+        Ok((max_fee_per_gas, max_priority_fee_per_gas))
     }
 
     async fn sign_transaction(

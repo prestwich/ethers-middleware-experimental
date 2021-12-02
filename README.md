@@ -5,10 +5,10 @@
 - [x] PubSub
   - [x] add new traits
   - [x] modify subscription stream
-- [ ] Tx Dispatch
+- [x] Tx Dispatch
   - [x] modify pending tx
-  - [ ] fill_transaction
-  - [ ] default sender
+  - [x] fill_transaction
+  - [x] default sender
 - [x] Middleware trait
   - [x] modify escalator
   - [x] ENS resolution
@@ -17,9 +17,9 @@
   - [ ] mock
   - [ ] quorum
   - [ ] retrying
-- [ ] renames
-  - [ ] `provider.rs` to `connection.rs`
-  - [ ] `transports/` to `connections/`
+- [x] renames
+  - [x] `provider.rs` to `connections/mod.rs`
+  - [x] `transports/` to `connections/`
 
 ## Stretch Goals
 
@@ -42,7 +42,7 @@
   these and provides a single import.
   - by default, it delegates to the underlying implementations
   - we recommend middleware implementors override behavior in the
-  `BaseMiddleware` or `Middleware` trait, NOT in the `NetworkMiddleware` trait
+    `BaseMiddleware` or `Middleware` trait, NOT in the `NetworkMiddleware` trait
 - the root middleware _may_ be a `PubSubConnection`
   - the `PubSubConnection` trait is primarily concerned with managing response
     channels

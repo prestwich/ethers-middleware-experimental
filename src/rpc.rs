@@ -94,28 +94,23 @@ impl_rpc!("eth_chainId", ChainId, response: U256);
 impl_rpc!(
     "eth_call",
     Call,
-    params: [ TypedTransaction, BlockNumber ],
+    params: [ Value, BlockNumber ],
     response: Bytes,
 );
 
-impl_rpc!(
-    "eth_estimateGas",
-    EstimateGas,
-    param: TypedTransaction,
-    response: U256,
-);
+impl_rpc!("eth_estimateGas", EstimateGas, param: Value, response: U256,);
 
 impl_rpc!(
     "eth_createAccessList",
     CreateAccessList,
-    params: [ TypedTransaction, BlockNumber ],
+    params: [ Value, BlockNumber ],
     response: AccessListWithGasUsed,
 );
 
 impl_rpc!(
     "eth_sendTransaction",
     SendTransaction,
-    param: TypedTransaction,
+    param: Value,
     response: H256,
 );
 

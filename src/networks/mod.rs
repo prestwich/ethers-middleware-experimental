@@ -8,7 +8,20 @@ use ethers::{
 
 use std::fmt::Debug;
 
-pub trait Txn: Debug + Clone + Send + Sync {
+#[derive(Debug, Copy, Clone, Default)]
+pub struct Eip1559Fees {
+    pub max_fee_per_gas: Option<U256>,
+    pub max_priority_fee_per_gas: Option<U256>,
+}
+
+pub trait Txn: Default + serde::Serialize + Debug + Clone + Send + Sync {
+    fn recommend_1559(&self) -> bool {
+        false
+    }
+
+    fn get_1559_fees(&self) -> Eip1559Fees;
+    fn set_1559_fees(&mut self, fees: &Eip1559Fees);
+
     fn from(&self) -> Option<&Address>;
     fn set_from(&mut self, from: Address);
     fn to(&self) -> Option<&NameOrAddress>;
