@@ -2,7 +2,7 @@ pub mod http;
 pub mod ws;
 
 mod mock;
-pub use mock::MockProvider;
+pub use mock::MockRpcConnection;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ipc;

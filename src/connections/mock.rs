@@ -15,12 +15,12 @@ use std::{
 
 #[derive(Clone, Debug)]
 /// Mock transport used in test environments.
-pub struct MockProvider {
+pub struct MockRpcConnection {
     requests: Arc<Mutex<VecDeque<(String, Value)>>>,
     responses: Arc<Mutex<VecDeque<Value>>>,
 }
 
-impl Default for MockProvider {
+impl Default for MockRpcConnection {
     fn default() -> Self {
         Self::new()
     }
@@ -28,7 +28,7 @@ impl Default for MockProvider {
 
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-impl RpcConnection for MockProvider {
+impl RpcConnection for MockRpcConnection {
     /// Pushes the `(method, input)` to the back of the `requests` queue,
     /// pops the responses from the back of the `responses` queue
     async fn _request(&self, request: RawRequest) -> Result<RawResponse, RpcError> {
@@ -45,7 +45,7 @@ impl RpcConnection for MockProvider {
     }
 }
 
-impl MockProvider {
+impl MockRpcConnection {
     /// Checks that the provided request was submitted by the client
     pub fn assert_request<T: Serialize + Send + Sync>(
         &self,
@@ -91,7 +91,7 @@ mod tests {
 
     #[tokio::test]
     async fn pushes_request_and_response() {
-        let mock = MockProvider::new();
+        let mock = MockRpcConnection::new();
         mock.push(U64::from(12)).unwrap();
         let block: U64 = mock
             .call_method("eth_blockNumber", ())
@@ -105,7 +105,7 @@ mod tests {
 
     #[tokio::test]
     async fn empty_responses() {
-        let mock = MockProvider::new();
+        let mock = MockRpcConnection::new();
         // tries to get a response without pushing a response
         let err = mock.call_method("eth_blockNumber", ()).await.unwrap_err();
         match err {
@@ -118,7 +118,7 @@ mod tests {
 
     #[tokio::test]
     async fn empty_requests() {
-        let mock = MockProvider::new();
+        let mock = MockRpcConnection::new();
         // tries to assert a request without making one
         let err = mock.assert_request("eth_blockNumber", ()).unwrap_err();
         match err {
