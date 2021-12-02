@@ -34,17 +34,15 @@ impl Txn for TypedTransaction {
     }
 
     fn set_1559_fees(&mut self, fees: &Eip1559Fees) {
-        match self {
-            TypedTransaction::Eip1559(tx) => {
-                if fees.max_fee_per_gas.is_some() {
-                    tx.max_fee_per_gas = fees.max_fee_per_gas;
-                }
-
-                if fees.max_priority_fee_per_gas.is_some() {
-                    tx.max_priority_fee_per_gas = fees.max_priority_fee_per_gas;
-                }
+        if let TypedTransaction::Eip1559(tx) = self {
+            // don't override with none
+            if fees.max_fee_per_gas.is_some() {
+                tx.max_fee_per_gas = fees.max_fee_per_gas;
             }
-            _ => {}
+
+            if fees.max_priority_fee_per_gas.is_some() {
+                tx.max_priority_fee_per_gas = fees.max_priority_fee_per_gas;
+            }
         }
     }
 

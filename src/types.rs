@@ -13,9 +13,9 @@ fn null_params(value: &Value) -> bool {
 
 #[derive(Serialize, Debug)]
 pub struct RawRequest {
-    method: &'static str,
+    pub method: &'static str,
     #[serde(skip_serializing_if = "null_params")]
-    params: Value,
+    pub params: Value,
 }
 
 #[derive(Deserialize, Debug, Clone)]

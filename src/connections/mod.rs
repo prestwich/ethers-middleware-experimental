@@ -1,6 +1,9 @@
 pub mod http;
 pub mod ws;
 
+mod mock;
+pub use mock::MockProvider;
+
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ipc;
 
