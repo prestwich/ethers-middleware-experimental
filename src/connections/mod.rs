@@ -1,6 +1,8 @@
 pub mod http;
-pub mod ipc;
 pub mod ws;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub mod ipc;
 
 use ethers::{
     abi::ParamType,
