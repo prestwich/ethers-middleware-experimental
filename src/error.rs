@@ -1,4 +1,4 @@
-use crate::types::JsonRpcError;
+use crate::types::{JsonRpcError, RawResponse};
 use futures_channel::oneshot;
 use thiserror::Error;
 use tokio_tungstenite::tungstenite::{self, protocol::CloseFrame};
@@ -34,6 +34,17 @@ pub enum RpcError {
     /// An IPC transport error
     #[error("{0}")]
     IpcError(#[from] IpcError),
+
+    /// No Quorum reached
+    #[error("No Quorum reached.")]
+    NoQuorumReached {
+        responses: Vec<RawResponse>,
+        errors: Vec<RpcError>,
+    },
+
+    /// Retrying Provider reached max requests"
+    #[error("Retrying Provider reached max requests")]
+    MaxRequests(Box<Vec<RpcError>>),
 
     /// Custom
     #[error("{0}")]

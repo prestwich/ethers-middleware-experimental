@@ -11,14 +11,14 @@ fn null_params(value: &Value) -> bool {
     matches!(value, Value::Null)
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone, PartialEq)]
 pub struct RawRequest {
     pub method: &'static str,
     #[serde(skip_serializing_if = "null_params")]
     pub params: Value,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq)]
 pub struct JsonRpcError {
     pub code: i64,
     pub message: String,
@@ -35,7 +35,7 @@ impl fmt::Display for JsonRpcError {
     }
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq)]
 #[serde(untagged)]
 pub enum RawResponse {
     Success { result: Value },

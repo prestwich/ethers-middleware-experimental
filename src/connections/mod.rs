@@ -1,8 +1,17 @@
-pub mod http;
-pub mod ws;
+mod http;
+pub use http::Http;
+
+mod ws;
+pub use ws::Ws;
 
 mod mock;
 pub use mock::MockRpcConnection;
+
+mod quorum;
+// pub use quorum::Quorum;
+
+mod retrying;
+pub use retrying::RetryingProvider;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ipc;

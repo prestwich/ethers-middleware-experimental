@@ -711,7 +711,7 @@ pub trait PubSubMiddleware<N: Network>: Middleware<N> + Send + Sync {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{connections::http::Http, connections::RpcConnection, networks::Ethereum};
+    use crate::{connections::Http, connections::RpcConnection, networks::Ethereum};
 
     #[derive(Debug)]
     pub struct CompileCheck<N>

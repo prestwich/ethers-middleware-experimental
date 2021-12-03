@@ -129,7 +129,7 @@ mod test {
     #[tokio::test]
     async fn it_makes_a_req() {
         use super::EthereumMiddleware;
-        let provider: crate::connections::http::Http =
+        let provider: crate::connections::Http =
             "https://mainnet.infura.io/v3/5cfdec76313b457cb696ff1b89cee7ee"
                 .parse()
                 .unwrap();
