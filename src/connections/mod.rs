@@ -8,7 +8,7 @@ mod mock;
 pub use mock::MockRpcConnection;
 
 mod quorum;
-// pub use quorum::Quorum;
+pub use quorum::QuorumProvider;
 
 mod retrying;
 pub use retrying::RetryingProvider;

@@ -1,3 +1,18 @@
+// used with WS and Quorum
+macro_rules! if_wasm {
+    ($($item:item)*) => {$(
+        #[cfg(target_arch = "wasm32")]
+        $item
+    )*}
+}
+
+macro_rules! if_not_wasm {
+    ($($item:item)*) => {$(
+        #[cfg(not(target_arch = "wasm32"))]
+        $item
+    )*}
+}
+
 macro_rules! impl_rpc_params {
     ($method:literal, $params:ty, $res:ty) => {
         impl crate::types::RequestParams for $params {

@@ -2,6 +2,8 @@
 pub mod macros;
 
 pub mod connections;
+pub use connections::*;
+
 pub mod ens;
 pub mod error;
 pub mod middleware;

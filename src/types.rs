@@ -89,7 +89,7 @@ pub struct JsonRpcResponse {
     pub result: RawResponse,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 /// A JSON-RPC Notifcation
 pub struct JsonRpcNotification {
     jsonrpc: String,
@@ -97,10 +97,18 @@ pub struct JsonRpcNotification {
     pub params: Notification,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Eq)]
 pub struct Notification {
     pub subscription: U256,
     pub result: Value,
+}
+
+// for convience in quorum provider
+impl std::hash::Hash for Notification {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.subscription.hash(state);
+        serde_json::to_string(&self.result).unwrap().hash(state);
+    }
 }
 
 #[async_trait]
