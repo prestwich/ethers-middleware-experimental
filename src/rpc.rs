@@ -15,6 +15,8 @@ impl_rpc!(
     response: Option<Value>,
 );
 
+impl_rpc!("net_version", NetVersion, response: U64);
+
 impl_rpc!(
     "eth_getBlockByNumber",
     GetBlockByNumber,

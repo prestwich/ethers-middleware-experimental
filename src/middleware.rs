@@ -64,6 +64,11 @@ pub trait BaseMiddleware<N: Network>: Debug + Send + Sync {
         self.inner_base().default_sender()
     }
 
+    /// Returns the network version
+    async fn net_version(&self) -> Result<U64, RpcError> {
+        self.inner_base().net_version().await
+    }
+
     /// Returns the current client version using the `web3_clientVersion` RPC.
     async fn client_version(&self) -> Result<String, RpcError> {
         self.inner_base().client_version().await

@@ -125,6 +125,10 @@ where
         rpc::dispatch_client_version(self).await
     }
 
+    async fn net_version(&self) -> Result<U64, RpcError> {
+        rpc::dispatch_net_version(self).await
+    }
+
     async fn get_block_number(&self) -> Result<U64, RpcError> {
         rpc::dispatch_block_number(self).await
     }
