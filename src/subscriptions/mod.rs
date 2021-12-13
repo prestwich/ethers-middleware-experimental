@@ -12,7 +12,8 @@ use serde::de::DeserializeOwned;
 
 use crate::{
     error::RpcError,
-    middleware::PubSubMiddleware,
+    filter_watcher::TransactionStream,
+    middleware::{Middleware, PubSubMiddleware},
     networks::Network,
     types::{Notification, SyncData},
 };
@@ -99,5 +100,146 @@ where
         // getting populated. We need to call `unsubscribe` explicitly to cancel
         // the subscription
         let _ = self.provider.pubsub_provider().uninstall_listener(self.id);
+    }
+}
+
+impl<'a, N> SubscriptionStream<'a, TxHash, N>
+where
+    N: Network,
+{
+    /// Returns a stream that yields the `Transaction`s for the transaction hashes this stream
+    /// yields.
+    ///
+    /// This internally calls `Provider::get_transaction` with every new transaction.
+    /// No more than n futures will be buffered at any point in time, and less than n may also be
+    /// buffered depending on the state of each future.
+    pub fn transactions_unordered(self, n: usize) -> TransactionStream<'a, Self, N> {
+        let provider = self.provider.as_middleware();
+        let provider = Middleware::as_base_middleware(provider);
+        TransactionStream::new(provider, self, n)
+    }
+}
+
+#[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
+mod tests {
+    use super::*;
+    use crate::{Ethereum, EthereumMiddleware, Http, Ws};
+    use ethers_core::{
+        types::{
+            transaction::eip2718::TypedTransaction, Transaction, TransactionReceipt,
+            TransactionRequest,
+        },
+        utils::{Ganache, Geth},
+    };
+    use futures_util::{stream, FutureExt, StreamExt};
+    use std::{collections::HashSet, convert::TryFrom, time::Duration};
+
+    #[tokio::test]
+    async fn can_stream_pending_transactions() {
+        let num_txs = 5;
+        let geth = Geth::new().block_time(2u64).spawn();
+        let provider: Http = geth.endpoint().parse::<Http>().unwrap();
+        let ws_provider = Ws::connect(geth.ws_endpoint()).await.unwrap();
+
+        let accounts = provider.accounts().await.unwrap();
+        let tx: TypedTransaction = TransactionRequest::new()
+            .from(accounts[0])
+            .to(accounts[0])
+            .value(1e18 as u64)
+            .into();
+
+        let mut sending = futures_util::future::join_all((0..num_txs).map(|_| async {
+            EthereumMiddleware::send_transaction(&provider, &tx.clone(), None)
+                .await
+                .unwrap()
+                .await
+                .unwrap()
+                .unwrap()
+        }))
+        .fuse();
+
+        let mut watch_tx_stream = EthereumMiddleware::watch_new_pending_transactions(&provider)
+            .await
+            .unwrap()
+            .transactions_unordered(num_txs)
+            .fuse();
+
+        let mut sub_tx_stream =
+            PubSubMiddleware::<Ethereum>::stream_new_pending_transactions(&ws_provider)
+                .await
+                .unwrap()
+                .transactions_unordered(2)
+                .fuse();
+
+        let mut sent: Option<Vec<TransactionReceipt>> = None;
+        let mut watch_received: Vec<Transaction> = Vec::with_capacity(num_txs);
+        let mut sub_received: Vec<Transaction> = Vec::with_capacity(num_txs);
+
+        loop {
+            futures_util::select! {
+                txs = sending => {
+                    sent = Some(txs)
+                },
+                tx = watch_tx_stream.next() => watch_received.push(tx.unwrap().unwrap()),
+                tx = sub_tx_stream.next() => sub_received.push(tx.unwrap().unwrap()),
+            };
+            if watch_received.len() == num_txs && sub_received.len() == num_txs {
+                if let Some(ref sent) = sent {
+                    assert_eq!(sent.len(), watch_received.len());
+                    let sent_txs = sent
+                        .iter()
+                        .map(|tx| tx.transaction_hash)
+                        .collect::<HashSet<_>>();
+                    assert_eq!(sent_txs, watch_received.iter().map(|tx| tx.hash).collect());
+                    assert_eq!(sent_txs, sub_received.iter().map(|tx| tx.hash).collect());
+                    break;
+                }
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn can_stream_transactions() {
+        let ganache = Ganache::new().block_time(2u64).spawn();
+        let provider: Http = ganache.endpoint().parse().unwrap();
+        // .with_sender(ganache.addresses()[0]);
+
+        let accounts = provider.accounts().await.unwrap();
+
+        let tx: TypedTransaction = TransactionRequest::new()
+            .from(accounts[0])
+            .to(accounts[0])
+            .value(1e18 as u64)
+            .into();
+
+        let txs = futures_util::future::join_all((0..3).map(|_| async {
+            EthereumMiddleware::send_transaction(&provider, &tx.clone(), None)
+                .await
+                .unwrap()
+                .await
+                .unwrap()
+        }))
+        .await;
+
+        let stream = TransactionStream::<_, Ethereum>::new(
+            &provider,
+            stream::iter(txs.iter().cloned().map(|tx| tx.unwrap().transaction_hash)),
+            10,
+        );
+        let res = stream
+            .collect::<Vec<_>>()
+            .await
+            .into_iter()
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
+
+        assert_eq!(res.len(), txs.len());
+        assert_eq!(
+            res.into_iter().map(|tx| tx.hash).collect::<HashSet<_>>(),
+            txs.into_iter()
+                .map(|tx| tx.unwrap().transaction_hash)
+                .collect()
+        );
     }
 }
