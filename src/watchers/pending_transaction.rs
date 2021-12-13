@@ -1,4 +1,4 @@
-use ethers::core::types::{Transaction, TransactionReceipt, TxHash, U64};
+use ethers_core::types::{Transaction, TransactionReceipt, TxHash, U64};
 use futures_core::stream::Stream;
 use futures_util::stream::StreamExt;
 use pin_project::pin_project;

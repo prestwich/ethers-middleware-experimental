@@ -4,7 +4,7 @@ use std::{
     task::{self, Poll},
 };
 
-use ethers::prelude::{Block, Log, TxHash, U256};
+use ethers_core::types::{Block, Log, TxHash, U256};
 use futures_channel::mpsc::UnboundedReceiver;
 use futures_core::Stream;
 use pin_project::{pin_project, pinned_drop};

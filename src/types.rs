@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use ethers::prelude::U256;
+use ethers_core::types::U256;
 use futures_channel::{mpsc, oneshot};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::Value;

@@ -1,6 +1,6 @@
 //! [Ethereum Name Service](https://docs.ens.domains/) support
 //! Adapted from https://github.com/hhatto/rust-ens/blob/master/src/lib.rs
-use ethers::core::{
+use ethers_core::{
     types::{Address, NameOrAddress, Selector, H160, H256, U256},
     utils::keccak256,
 };

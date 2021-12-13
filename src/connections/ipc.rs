@@ -7,7 +7,7 @@ use crate::{
     },
 };
 
-use ethers::prelude::U256;
+use ethers_core::types::U256;
 
 use async_trait::async_trait;
 use futures_channel::{
@@ -267,57 +267,75 @@ where
 #[cfg(all(test, unix))]
 #[cfg(not(feature = "celo"))]
 mod test {
-    // use super::*;
-    // use ethers::core::{
-    //     types::{Block, TxHash, U256},
-    //     utils::Geth,
-    // };
-    // use tempfile::NamedTempFile;
+    use super::*;
+    use ethers_core::{
+        types::{Block, TxHash, U256, U64},
+        utils::Geth,
+    };
+    use tempfile::NamedTempFile;
 
-    // #[tokio::test]
-    // async fn request() {
-    //     let temp_file = NamedTempFile::new().unwrap();
-    //     let path = temp_file.into_temp_path().to_path_buf();
-    //     let _geth = Geth::new().block_time(1u64).ipc_path(&path).spawn();
-    //     let ipc = Ipc::connect(path).await.unwrap();
+    #[tokio::test]
+    async fn request() {
+        let temp_file = NamedTempFile::new().unwrap();
+        let path = temp_file.into_temp_path().to_path_buf();
+        let _geth = Geth::new().block_time(1u64).ipc_path(&path).spawn();
+        let ipc = Ipc::connect(path).await.unwrap();
 
-    //     let block_num: U256 = ipc.request("eth_blockNumber", ()).await.unwrap();
-    //     std::thread::sleep(std::time::Duration::new(3, 0));
-    //     let block_num2: U256 = ipc.request("eth_blockNumber", ()).await.unwrap();
-    //     assert!(block_num2 > block_num);
-    // }
+        let block_num: U256 = ipc
+            .call_method("eth_blockNumber", ())
+            .await
+            .unwrap()
+            .deserialize()
+            .unwrap();
 
-    // #[tokio::test]
-    // async fn subscription() {
-    //     let temp_file = NamedTempFile::new().unwrap();
-    //     let path = temp_file.into_temp_path().to_path_buf();
-    //     let _geth = Geth::new().block_time(2u64).ipc_path(&path).spawn();
-    //     let ipc = Ipc::connect(path).await.unwrap();
+        std::thread::sleep(std::time::Duration::new(3, 0));
+        let block_num2: U256 = ipc
+            .call_method("eth_blockNumber", ())
+            .await
+            .unwrap()
+            .deserialize()
+            .unwrap();
+        assert!(block_num2 > block_num);
+    }
 
-    //     let sub_id: U256 = ipc.request("eth_subscribe", ["newHeads"]).await.unwrap();
-    //     let mut stream = ipc.subscribe(sub_id).unwrap();
+    #[tokio::test]
+    async fn subscription() {
+        let temp_file = NamedTempFile::new().unwrap();
+        let path = temp_file.into_temp_path().to_path_buf();
+        let _geth = Geth::new().block_time(2u64).ipc_path(&path).spawn();
+        let ipc = Ipc::connect(path).await.unwrap();
 
-    //     // Subscribing requires sending the sub request and then subscribing to
-    //     // the returned sub_id
-    //     let block_num: u64 = ipc
-    //         .request::<_, U256>("eth_blockNumber", ())
-    //         .await
-    //         .unwrap()
-    //         .as_u64();
-    //     let mut blocks = Vec::new();
-    //     for _ in 0..3 {
-    //         let item = stream.next().await.unwrap();
-    //         let block = serde_json::from_value::<Block<TxHash>>(item).unwrap();
-    //         blocks.push(block.number.unwrap_or_default().as_u64());
-    //     }
-    //     let offset = blocks[0] - block_num;
-    //     assert_eq!(
-    //         blocks,
-    //         &[
-    //             block_num + offset,
-    //             block_num + offset + 1,
-    //             block_num + offset + 2
-    //         ]
-    //     )
-    // }
+        let sub_id: U256 = ipc
+            .call_method("eth_subscribe", ["newHeads"])
+            .await
+            .unwrap()
+            .deserialize()
+            .unwrap();
+        let mut stream = ipc.install_listener(sub_id).unwrap();
+
+        // Subscribing requires sending the sub call_method and then subscribing to
+        // the returned sub_id
+        let block_num: u64 = ipc
+            .call_method("eth_blockNumber", ())
+            .await
+            .unwrap()
+            .deserialize::<U64>()
+            .unwrap()
+            .as_u64();
+        let mut blocks = Vec::new();
+        for _ in 0..3 {
+            let item = stream.next().await.unwrap();
+            let block = serde_json::from_value::<Block<TxHash>>(item.result).unwrap();
+            blocks.push(block.number.unwrap_or_default().as_u64());
+        }
+        let offset = blocks[0] - block_num;
+        assert_eq!(
+            blocks,
+            &[
+                block_num + offset,
+                block_num + offset + 1,
+                block_num + offset + 2
+            ]
+        )
+    }
 }

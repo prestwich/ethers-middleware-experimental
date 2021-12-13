@@ -1,6 +1,6 @@
-use ethers::{
-    core::types::transaction::{eip2718::TypedTransaction, eip2930::AccessList},
-    prelude::{Address, Bytes, NameOrAddress, Signature, TxHash, U256, U64},
+use ethers_core::types::{
+    transaction::{eip2718::TypedTransaction, eip2930::AccessList},
+    Address, Bytes, NameOrAddress, Signature, TxHash, U256, U64,
 };
 
 use std::fmt::Debug;

@@ -1,4 +1,4 @@
-use ethers::core::types::{Bytes, TransactionReceipt, H256};
+use ethers_core::types::{Bytes, TransactionReceipt, H256};
 use futures_util::{stream::FuturesUnordered, StreamExt};
 use pin_project::pin_project;
 use std::{

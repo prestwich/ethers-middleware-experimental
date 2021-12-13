@@ -10,7 +10,7 @@ edition = "2018"
 [dependencies]
 # ethers-core = { version = "^0.6.0", path = "../ethers-core", default-features = false }
 
-ethers = { path = "../ethers-rs" }
+ethers-core = { path = "../ethers-rs/ethers-core" }
 paste = "1.0.6"
 
 async-trait = { version = "0.1.50", default-features = false }
@@ -30,7 +30,7 @@ futures-channel = { version = "0.3.16", default-features = false }
 pin-project = { version = "1.0.7", default-features = false }
 
 # tracing
-tracing = { version = "0.1.29", default-features = false }
+tracing = { version = "0.1.29" }
 tracing-futures = { version = "0.2.5", default-features = false, features = ["std-future"] }
 
 bytes = { version  = "1.1.0", default-features = false, optional = true }

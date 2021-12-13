@@ -20,6 +20,9 @@ pub mod subscriptions;
 
 // TODO: REMOVE FROM HERE
 
+pub type EscalationPolicy =
+    Box<dyn Fn(ethers_core::types::U256, usize) -> ethers_core::types::U256 + Send + Sync>;
+
 use error::RpcError;
 use futures_core::stream::Stream;
 use futures_util::{stream::StreamExt, FutureExt};

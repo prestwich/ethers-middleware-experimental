@@ -7,7 +7,7 @@ use std::{
 };
 
 use async_trait::async_trait;
-use ethers::core::types::{U256, U64};
+use ethers_core::types::{U256, U64};
 use futures_channel::mpsc::{self, UnboundedReceiver, UnboundedSender};
 use futures_util::{future::join_all, stream::select_all, FutureExt, StreamExt};
 
@@ -432,12 +432,10 @@ impl QuorumStream {
 
                 // if the total weight was not previously above quorum,
                 // but now is, dispatch the notification
-                if *total_weight >= quorum_weight
-                    && *total_weight - new_weight < quorum_weight
-                {
+                if *total_weight >= quorum_weight && *total_weight - new_weight < quorum_weight {
                     match self.outbound.unbounded_send(incoming) {
                         Ok(_) => {}
-                        Err(_) => break
+                        Err(_) => break,
                     }
                 }
             }

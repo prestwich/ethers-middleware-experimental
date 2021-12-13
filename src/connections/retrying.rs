@@ -92,13 +92,13 @@ impl<P> PubSubConnection for RetryingProvider<P>
 where
     P: PubSubConnection + 'static,
 {
-    fn uninstall_listener(&self, id: ethers::prelude::U256) -> Result<(), RpcError> {
+    fn uninstall_listener(&self, id: ethers_core::types::U256) -> Result<(), RpcError> {
         self.inner.uninstall_listener(id)
     }
 
     fn install_listener(
         &self,
-        id: ethers::prelude::U256,
+        id: ethers_core::types::U256,
     ) -> Result<futures_channel::mpsc::UnboundedReceiver<crate::types::Notification>, RpcError>
     {
         self.inner.install_listener(id)

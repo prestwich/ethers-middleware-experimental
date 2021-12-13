@@ -16,10 +16,12 @@ pub use retrying::RetryingProvider;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ipc;
 
-use ethers::{
+use ethers_core::{
     abi::ParamType,
-    core::types::transaction::{eip2718::TypedTransaction, eip2930::AccessListWithGasUsed},
-    prelude::*,
+    types::{
+        transaction::{eip2718::TypedTransaction, eip2930::AccessListWithGasUsed},
+        *,
+    },
     utils::{
         eip1559_default_estimator, EIP1559_FEE_ESTIMATION_PAST_BLOCKS,
         EIP1559_FEE_ESTIMATION_REWARD_PERCENTILE,
@@ -513,7 +515,7 @@ where
             registry,
             ParamType::Address,
             ens_name,
-            ens::ADDR_SELECTOR,
+            crate::ens::ADDR_SELECTOR,
         )
         .await
     }
@@ -523,14 +525,14 @@ where
         registry: Option<Address>,
         address: Address,
     ) -> Result<String, RpcError> {
-        let ens_name = ens::reverse_address(address);
+        let ens_name = crate::ens::reverse_address(address);
 
         Middleware::<N>::query_resolver(
             self,
             registry,
             ParamType::String,
             &ens_name,
-            ens::NAME_SELECTOR,
+            crate::ens::NAME_SELECTOR,
         )
         .await
     }

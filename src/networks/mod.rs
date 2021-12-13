@@ -1,9 +1,8 @@
 pub mod ethereum;
 pub use ethereum::{Ethereum, EthereumMiddleware};
 
-use ethers::{
-    core::types::transaction::eip2930::AccessList,
-    prelude::{Address, Bytes, NameOrAddress, Signature, H256, U256, U64},
+use ethers_core::types::{
+    transaction::eip2930::AccessList, Address, Bytes, NameOrAddress, Signature, H256, U256, U64,
 };
 
 use std::fmt::Debug;

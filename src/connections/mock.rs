@@ -87,7 +87,7 @@ impl MockRpcConnection {
 mod tests {
     use super::*;
     use crate::connections::RpcConnection;
-    use ethers::core::types::U64;
+    use ethers_core::types::U64;
 
     #[tokio::test]
     async fn pushes_request_and_response() {

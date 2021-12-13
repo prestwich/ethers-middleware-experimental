@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use ethers::prelude::U256;
+use ethers_core::types::U256;
 use futures_channel::{
     mpsc::{self, UnboundedReceiver},
     oneshot,
@@ -402,7 +402,7 @@ mod tests {
         middleware::{BaseMiddleware, PubSubMiddleware},
         networks::Ethereum,
     };
-    use ethers::core::{
+    use ethers_core::{
         types::{Block, TxHash, U256},
         utils::Ganache,
     };

@@ -12,11 +12,11 @@
 - [x] Middleware trait
   - [x] modify escalator
   - [x] ENS resolution
-- [ ] remaining transports
+- [x] remaining transports
   - [x] ipc
-  - [ ] mock
-  - [ ] quorum
-  - [ ] retrying
+  - [x] mock
+  - [x] quorum
+  - [x] retrying
 - [x] renames
   - [x] `provider.rs` to `connections/mod.rs`
   - [x] `transports/` to `connections/`

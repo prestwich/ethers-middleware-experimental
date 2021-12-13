@@ -1,8 +1,4 @@
-use ethers::{
-    core::types::{Transaction, TxHash, H256, U256},
-    prelude::Log,
-};
-
+use ethers_core::types::{Log, Transaction, TxHash, H256, U256};
 use futures_core::{stream::Stream, Future};
 use futures_util::{stream::FuturesUnordered, FutureExt, StreamExt};
 use pin_project::pin_project;

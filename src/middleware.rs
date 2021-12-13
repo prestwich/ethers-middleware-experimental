@@ -1,16 +1,17 @@
 use std::fmt::Debug;
 
 use async_trait::async_trait;
-use ethers::{
+use ethers_core::{
     abi::{self, Detokenize, ParamType},
-    core::types::transaction::{eip2718::TypedTransaction, eip2930::AccessListWithGasUsed},
-    prelude::{
-        maybe, Address, Block, BlockId, BlockNumber, BlockTrace, Bytes, EIP1186ProofResponse,
-        EscalationPolicy, FeeHistory, Filter, Log, NameOrAddress, Selector, Signature, Trace,
-        TraceFilter, TraceType, Transaction, TransactionReceipt, TxHash, TxpoolContent,
-        TxpoolInspect, TxpoolStatus, H256, U256, U64,
+    types::{
+        transaction::{eip2718::TypedTransaction, eip2930::AccessListWithGasUsed},
+        Address, Block, BlockId, BlockNumber, BlockTrace, Bytes, EIP1186ProofResponse, FeeHistory,
+        Filter, Log, NameOrAddress, Selector, Signature, Trace, TraceFilter, TraceType,
+        Transaction, TransactionReceipt, TxHash, TxpoolContent, TxpoolInspect, TxpoolStatus, H256,
+        U256, U64,
     },
 };
+use futures_core::Future;
 use futures_util::future::join_all;
 use serde_json::Value;
 
@@ -23,8 +24,20 @@ use crate::{
     pending_escalator::EscalatingPending,
     pending_transaction::PendingTransaction,
     subscriptions::{LogStream, NewBlockStream, PendingTransactionStream, SyncingStream},
-    Eip1559Fees,
+    Eip1559Fees, EscalationPolicy,
 };
+
+/// Calls the future if `item` is None, otherwise returns a `futures::ok`
+pub async fn maybe<F, T, E>(item: Option<T>, f: F) -> Result<T, E>
+where
+    F: Future<Output = Result<T, E>>,
+{
+    if let Some(item) = item {
+        futures_util::future::ok(item).await
+    } else {
+        f.await
+    }
+}
 
 /// infallible conversion of Bytes to Address/String
 ///

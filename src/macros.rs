@@ -225,7 +225,7 @@ macro_rules! impl_network_middleware {
 
 
                 /// Return a default tx sender address for this provider
-                fn default_sender(&self) -> Option<ethers::prelude::Address> {
+                fn default_sender(&self) -> Option<ethers_core::types::Address> {
                     [<$network Middleware>]::as_base_middleware(self).default_sender()
                 }
 
@@ -235,30 +235,30 @@ macro_rules! impl_network_middleware {
                 }
 
                 /// Gets the latest block number via the `eth_BlockNumber` API
-                async fn get_block_number(&self) -> Result<ethers::prelude::U64, crate::error::RpcError> {
+                async fn get_block_number(&self) -> Result<ethers_core::types::U64, crate::error::RpcError> {
                     [<$network Middleware>]::as_base_middleware(self).get_block_number().await
                 }
 
                 /// Gets the block at `block_hash_or_number` (transaction hashes only)
                 async fn get_block(
                     &self,
-                    block_hash_or_number: ethers::prelude::BlockId,
-                ) -> Result<Option<ethers::prelude::Block<ethers::prelude::TxHash>>, crate::error::RpcError> {
+                    block_hash_or_number: ethers_core::types::BlockId,
+                ) -> Result<Option<ethers_core::types::Block<ethers_core::types::TxHash>>, crate::error::RpcError> {
                     [<$network Middleware>]::as_base_middleware(self).get_block(block_hash_or_number).await
                 }
 
                 /// Gets the block at `block_hash_or_number` (full transactions included)
                 async fn get_block_with_txs(
                     &self,
-                    block_hash_or_number: ethers::prelude::BlockId,
-                ) -> Result<Option<ethers::prelude::Block<ethers::prelude::Transaction>>, crate::error::RpcError> {
+                    block_hash_or_number: ethers_core::types::BlockId,
+                ) -> Result<Option<ethers_core::types::Block<ethers_core::types::Transaction>>, crate::error::RpcError> {
                     [<$network Middleware>]::as_base_middleware(self)
                         .get_block_with_txs(block_hash_or_number)
                         .await
                 }
 
                 /// Gets the block uncle count at `block_hash_or_number`
-                async fn get_uncle_count(&self, block_hash_or_number: ethers::prelude::BlockId) -> Result<U256, crate::error::RpcError> {
+                async fn get_uncle_count(&self, block_hash_or_number: ethers_core::types::BlockId) -> Result<U256, crate::error::RpcError> {
                     [<$network Middleware>]::as_base_middleware(self)
                         .get_uncle_count(block_hash_or_number)
                         .await
@@ -267,9 +267,9 @@ macro_rules! impl_network_middleware {
                 /// Gets the block uncle at `block_hash_or_number` and `idx`
                 async fn get_uncle(
                     &self,
-                    block_hash_or_number: ethers::prelude::BlockId,
-                    idx: ethers::prelude::U64,
-                ) -> Result<Option<ethers::prelude::Block<ethers::prelude::H256>>, crate::error::RpcError> {
+                    block_hash_or_number: ethers_core::types::BlockId,
+                    idx: ethers_core::types::U64,
+                ) -> Result<Option<ethers_core::types::Block<ethers_core::types::H256>>, crate::error::RpcError> {
                     [<$network Middleware>]::as_base_middleware(self).get_uncle(block_hash_or_number, idx).await
                 }
 
@@ -277,7 +277,7 @@ macro_rules! impl_network_middleware {
                 async fn get_transaction(
                     &self,
                     transaction_hash: TxHash,
-                ) -> Result<Option<ethers::prelude::Transaction>, crate::error::RpcError> {
+                ) -> Result<Option<ethers_core::types::Transaction>, crate::error::RpcError> {
                     [<$network Middleware>]::as_base_middleware(self).get_transaction(transaction_hash).await
                 }
 
@@ -285,7 +285,7 @@ macro_rules! impl_network_middleware {
                 async fn get_transaction_receipt(
                     &self,
                     transaction_hash: TxHash,
-                ) -> Result<Option<ethers::prelude::TransactionReceipt>, crate::error::RpcError> {
+                ) -> Result<Option<ethers_core::types::TransactionReceipt>, crate::error::RpcError> {
                     [<$network Middleware>]::as_base_middleware(self)
                         .get_transaction_receipt(transaction_hash)
                         .await
@@ -297,42 +297,42 @@ macro_rules! impl_network_middleware {
                 /// non-standard and currently supported by Erigon, OpenEthereum and Nethermind.
                 async fn get_block_receipts(
                     &self,
-                    block: ethers::prelude::BlockNumber,
-                ) -> Result<Vec<ethers::prelude::TransactionReceipt>, crate::error::RpcError> {
+                    block: ethers_core::types::BlockNumber,
+                ) -> Result<Vec<ethers_core::types::TransactionReceipt>, crate::error::RpcError> {
                     [<$network Middleware>]::as_base_middleware(self).get_block_receipts(block).await
                 }
 
                 /// Gets the current gas price as estimated by the node
-                async fn gas_price(&self) -> Result<ethers::prelude::U256, crate::error::RpcError> {
+                async fn gas_price(&self) -> Result<ethers_core::types::U256, crate::error::RpcError> {
                     [<$network Middleware>]::as_base_middleware(self).gas_price().await
                 }
 
                 /// Gets the accounts on the node
-                async fn accounts(&self) -> Result<Vec<ethers::prelude::Address>, crate::error::RpcError> {
+                async fn accounts(&self) -> Result<Vec<ethers_core::types::Address>, crate::error::RpcError> {
                     [<$network Middleware>]::as_base_middleware(self).accounts().await
                 }
 
                 /// Returns the nonce of the address
                 async fn get_transaction_count(
                     &self,
-                    from: Address,
-                    block: Option<ethers::prelude::BlockNumber>,
-                ) -> Result<ethers::prelude::U256, crate::error::RpcError> {
+                    from: ethers_core::types::Address,
+                    block: Option<ethers_core::types::BlockNumber>,
+                ) -> Result<ethers_core::types::U256, crate::error::RpcError> {
                     [<$network Middleware>]::as_base_middleware(self).get_transaction_count(from, block).await
                 }
 
                 /// Returns the account's balance
                 async fn get_balance(
                     &self,
-                    from: Address,
-                    block: Option<ethers::prelude::BlockNumber>,
-                ) -> Result<ethers::prelude::U256, crate::error::RpcError> {
+                    from: ethers_core::types::Address,
+                    block: Option<ethers_core::types::BlockNumber>,
+                ) -> Result<ethers_core::types::U256, crate::error::RpcError> {
                     [<$network Middleware>]::as_base_middleware(self).get_balance(from, block).await
                 }
 
                 /// Returns the currently configured chain id, a value used in replay-protected
                 /// transaction signing as introduced by EIP-155.
-                async fn chain_id(&self) -> Result<ethers::prelude::U256, crate::error::RpcError> {
+                async fn chain_id(&self) -> Result<ethers_core::types::U256, crate::error::RpcError> {
                     [<$network Middleware>]::as_base_middleware(self).chain_id().await
                 }
 
@@ -342,7 +342,7 @@ macro_rules! impl_network_middleware {
                 async fn call(
                     &self,
                     tx: &<$network as crate::networks::Network>::TransactionRequest,
-                    block: Option<ethers::prelude::BlockNumber>,
+                    block: Option<ethers_core::types::BlockNumber>,
                 ) -> Result<Bytes, crate::error::RpcError> {
                     [<$network Middleware>]::as_base_middleware(self).call(tx, block).await
                 }
@@ -351,7 +351,7 @@ macro_rules! impl_network_middleware {
                 /// required (as a U256) to send it This is free, but only an estimate. Providing too little
                 /// gas will result in a transaction being rejected (while still consuming all provided
                 /// gas).
-                async fn estimate_gas(&self, tx: &<$network as crate::networks::Network>::TransactionRequest) -> Result<ethers::prelude::U256, crate::error::RpcError> {
+                async fn estimate_gas(&self, tx: &<$network as crate::networks::Network>::TransactionRequest) -> Result<ethers_core::types::U256, crate::error::RpcError> {
                     [<$network Middleware>]::as_base_middleware(self).estimate_gas(tx).await
                 }
 
@@ -359,38 +359,38 @@ macro_rules! impl_network_middleware {
                 async fn create_access_list(
                     &self,
                     tx: &<$network as crate::networks::Network>::TransactionRequest,
-                    block: Option<ethers::prelude::BlockNumber>,
-                ) -> Result<ethers::core::types::transaction::eip2930::AccessListWithGasUsed, crate::error::RpcError> {
+                    block: Option<ethers_core::types::BlockNumber>,
+                ) -> Result<ethers_core::types::transaction::eip2930::AccessListWithGasUsed, crate::error::RpcError> {
                     [<$network Middleware>]::as_base_middleware(self).create_access_list(tx, block).await
                 }
 
                 /// Signs data using a specific account. This account needs to be unlocked.
-                async fn sign(&self, from: Address, data: Bytes) -> Result<Signature, crate::error::RpcError> {
+                async fn sign(&self, from: ethers_core::types::Address, data: ethers_core::types::Bytes) -> Result<Signature, crate::error::RpcError> {
                     [<$network Middleware>]::as_base_middleware(self).sign(from, data).await
                 }
 
                 /// Returns an array (possibly empty) of logs that match the filter
-                async fn get_logs(&self, filter: &ethers::prelude::Filter) -> Result<Vec<ethers::prelude::Log>, crate::error::RpcError> {
+                async fn get_logs(&self, filter: &ethers_core::types::Filter) -> Result<Vec<ethers_core::types::Log>, crate::error::RpcError> {
                     [<$network Middleware>]::as_base_middleware(self).get_logs(filter).await
                 }
 
                 /// Create a new block filter for later polling.
-                async fn new_block_filter(&self) -> Result<ethers::prelude::U256, crate::error::RpcError> {
+                async fn new_block_filter(&self) -> Result<ethers_core::types::U256, crate::error::RpcError> {
                     [<$network Middleware>]::as_base_middleware(self).new_block_filter().await
                 }
 
                 /// Create a new pending transaction filter for later polling.
-                async fn new_pending_transaction_filter(&self) -> Result<ethers::prelude::U256, crate::error::RpcError> {
+                async fn new_pending_transaction_filter(&self) -> Result<ethers_core::types::U256, crate::error::RpcError> {
                     [<$network Middleware>]::as_base_middleware(self).new_pending_transaction_filter().await
                 }
 
                 /// Create a new log filter for later polling.
-                async fn new_log_filter(&self, filter: &ethers::prelude::Filter) -> Result<ethers::prelude::U256, crate::error::RpcError> {
+                async fn new_log_filter(&self, filter: &ethers_core::types::Filter) -> Result<ethers_core::types::U256, crate::error::RpcError> {
                     [<$network Middleware>]::as_base_middleware(self).new_log_filter(filter).await
                 }
 
                 /// Poll a pending transaction filter for any changes
-                async fn poll_pending_transaction_filter(&self, id: ethers::prelude::U256) -> Result<Vec<ethers::prelude::TxHash>, crate::error::RpcError> {
+                async fn poll_pending_transaction_filter(&self, id: ethers_core::types::U256) -> Result<Vec<ethers_core::types::TxHash>, crate::error::RpcError> {
                     self.get_filter_changes(id)
                         .await?
                         .into_iter()
@@ -399,7 +399,7 @@ macro_rules! impl_network_middleware {
                 }
 
                 /// Poll a new block filter for any changes
-                async fn poll_new_block_filter(&self, id: ethers::prelude::U256) -> Result<Vec<ethers::prelude::H256>, crate::error::RpcError> {
+                async fn poll_new_block_filter(&self, id: ethers_core::types::U256) -> Result<Vec<ethers_core::types::H256>, crate::error::RpcError> {
                     self.get_filter_changes(id)
                         .await?
                         .into_iter()
@@ -408,7 +408,7 @@ macro_rules! impl_network_middleware {
                 }
 
                 /// Poll an event log filter for any changes
-                async fn poll_log_filter(&self, id: ethers::prelude::U256) -> Result<Vec<ethers::prelude::Log>, crate::error::RpcError> {
+                async fn poll_log_filter(&self, id: ethers_core::types::U256) -> Result<Vec<ethers_core::types::Log>, crate::error::RpcError> {
                     self.get_filter_changes(id)
                         .await?
                         .into_iter()
@@ -417,24 +417,24 @@ macro_rules! impl_network_middleware {
                 }
 
                 // /// Uninstall a block, log, or pending transaction filter on the RPC host
-                async fn uninstall_filter(&self, id: ethers::prelude::U256) -> Result<bool, crate::error::RpcError> {
+                async fn uninstall_filter(&self, id: ethers_core::types::U256) -> Result<bool, crate::error::RpcError> {
                     [<$network Middleware>]::as_base_middleware(self).uninstall_filter(id).await
                 }
 
                 /// Get the storage of an address for a particular slot location
                 async fn get_storage_at(
                     &self,
-                    from: ethers::prelude::Address,
-                    location: ethers::prelude::H256,
-                    block: Option<ethers::prelude::BlockNumber>,
-                ) -> Result<ethers::prelude::H256, crate::error::RpcError> {
+                    from: ethers_core::types::Address,
+                    location: ethers_core::types::H256,
+                    block: Option<ethers_core::types::BlockNumber>,
+                ) -> Result<ethers_core::types::H256, crate::error::RpcError> {
                     [<$network Middleware>]::as_base_middleware(self)
                         .get_storage_at(from, location, block)
                         .await
                 }
 
                 /// Returns the deployed code at a given address
-                async fn get_code(&self, at: ethers::prelude::Address, block: Option<ethers::prelude::BlockNumber>) -> Result<ethers::prelude::Bytes, crate::error::RpcError> {
+                async fn get_code(&self, at: ethers_core::types::Address, block: Option<ethers_core::types::BlockNumber>) -> Result<ethers_core::types::Bytes, crate::error::RpcError> {
                     [<$network Middleware>]::as_base_middleware(self).get_code(at, block).await
                 }
 
@@ -442,20 +442,20 @@ macro_rules! impl_network_middleware {
                 /// https://github.com/ethereum/EIPs/issues/1186
                 async fn get_proof(
                     &self,
-                    from: ethers::prelude::Address,
-                    locations: Vec<ethers::prelude::H256>,
-                    block: Option<ethers::prelude::BlockNumber>,
-                ) -> Result<ethers::prelude::EIP1186ProofResponse, crate::error::RpcError> {
+                    from: ethers_core::types::Address,
+                    locations: Vec<ethers_core::types::H256>,
+                    block: Option<ethers_core::types::BlockNumber>,
+                ) -> Result<ethers_core::types::EIP1186ProofResponse, crate::error::RpcError> {
                     [<$network Middleware>]::as_base_middleware(self).get_proof(from, locations, block).await
                 }
 
                 /// Return the eip1559 RPC Fee History object
                 async fn fee_history(
                     &self,
-                    block_count: ethers::prelude::U256,
-                    last_block: ethers::prelude::BlockNumber,
+                    block_count: ethers_core::types::U256,
+                    last_block: ethers_core::types::BlockNumber,
                     reward_percentiles: &[f64],
-                ) -> Result<ethers::prelude::FeeHistory, crate::error::RpcError> {
+                ) -> Result<ethers_core::types::FeeHistory, crate::error::RpcError> {
                     [<$network Middleware>]::as_base_middleware(self)
                         .fee_history(block_count, last_block, reward_percentiles)
                         .await
@@ -464,21 +464,21 @@ macro_rules! impl_network_middleware {
                 /// Returns the details of all transactions currently pending for inclusion in the next
                 /// block(s), as well as the ones that are being scheduled for future execution only.
                 /// Ref: [Here](https://geth.ethereum.org/docs/rpc/ns-txpool#txpool_content)
-                async fn txpool_content(&self) -> Result<ethers::prelude::TxpoolContent, crate::error::RpcError> {
+                async fn txpool_content(&self) -> Result<ethers_core::types::TxpoolContent, crate::error::RpcError> {
                     [<$network Middleware>]::as_geth_middleware(self).txpool_content().await
                 }
 
                 /// Returns a summary of all the transactions currently pending for inclusion in the next
                 /// block(s), as well as the ones that are being scheduled for future execution only.
                 /// Ref: [Here](https://geth.ethereum.org/docs/rpc/ns-txpool#txpool_inspect)
-                async fn txpool_inspect(&self) -> Result<ethers::prelude::TxpoolInspect, crate::error::RpcError> {
+                async fn txpool_inspect(&self) -> Result<ethers_core::types::TxpoolInspect, crate::error::RpcError> {
                     [<$network Middleware>]::as_geth_middleware(self).txpool_inspect().await
                 }
 
                 /// Returns the number of transactions currently pending for inclusion in the next block(s), as
                 /// well as the ones that are being scheduled for future execution only.
                 /// Ref: [Here](https://geth.ethereum.org/docs/rpc/ns-txpool#txpool_status)
-                async fn txpool_status(&self) -> Result<ethers::prelude::TxpoolStatus, crate::error::RpcError> {
+                async fn txpool_status(&self) -> Result<ethers_core::types::TxpoolStatus, crate::error::RpcError> {
                     [<$network Middleware>]::as_geth_middleware(self).txpool_status().await
                 }
 
@@ -486,18 +486,18 @@ macro_rules! impl_network_middleware {
                 async fn trace_call(
                     &self,
                     req: <$network as crate::networks::Network >::TransactionRequest,
-                    trace_type: Vec<ethers::prelude::TraceType>,
-                    block: Option<ethers::prelude::BlockNumber>,
-                ) -> Result<ethers::prelude::BlockTrace, crate::error::RpcError> {
+                    trace_type: Vec<ethers_core::types::TraceType>,
+                    block: Option<ethers_core::types::BlockNumber>,
+                ) -> Result<ethers_core::types::BlockTrace, crate::error::RpcError> {
                     [<$network Middleware>]::as_parity_middleware(self).trace_call(req, trace_type, block).await
                 }
 
                 /// Traces a call to `eth_sendRawTransaction` without making the call, returning the traces
                 async fn trace_raw_transaction(
                     &self,
-                    data: ethers::prelude::Bytes,
-                    trace_type: Vec<ethers::prelude::TraceType>,
-                ) -> Result<ethers::prelude::BlockTrace, crate::error::RpcError> {
+                    data: ethers_core::types::Bytes,
+                    trace_type: Vec<ethers_core::types::TraceType>,
+                ) -> Result<ethers_core::types::BlockTrace, crate::error::RpcError> {
                     [<$network Middleware>]::as_parity_middleware(self)
                         .trace_raw_transaction(data, trace_type)
                         .await
@@ -506,9 +506,9 @@ macro_rules! impl_network_middleware {
                 /// Replays a transaction, returning the traces
                 async fn trace_replay_transaction(
                     &self,
-                    hash: ethers::prelude::H256,
-                    trace_type: Vec<ethers::prelude::TraceType>,
-                ) -> Result<ethers::prelude::BlockTrace, crate::error::RpcError> {
+                    hash: ethers_core::types::H256,
+                    trace_type: Vec<ethers_core::types::TraceType>,
+                ) -> Result<ethers_core::types::BlockTrace, crate::error::RpcError> {
                     [<$network Middleware>]::as_parity_middleware(self)
                         .trace_replay_transaction(hash, trace_type)
                         .await
@@ -517,48 +517,48 @@ macro_rules! impl_network_middleware {
                 /// Replays all transactions in a block returning the requested traces for each transaction
                 async fn trace_replay_block_transactions(
                     &self,
-                    block: ethers::prelude::BlockNumber,
-                    trace_type: Vec<ethers::prelude::TraceType>,
-                ) -> Result<Vec<ethers::prelude::BlockTrace>, crate::error::RpcError> {
+                    block: ethers_core::types::BlockNumber,
+                    trace_type: Vec<ethers_core::types::TraceType>,
+                ) -> Result<Vec<ethers_core::types::BlockTrace>, crate::error::RpcError> {
                     [<$network Middleware>]::as_parity_middleware(self)
                         .trace_replay_block_transactions(block, trace_type)
                         .await
                 }
 
                 /// Returns traces created at given block
-                async fn trace_block(&self, block: ethers::prelude::BlockNumber) -> Result<Vec<ethers::prelude::Trace>, crate::error::RpcError> {
+                async fn trace_block(&self, block: ethers_core::types::BlockNumber) -> Result<Vec<ethers_core::types::Trace>, crate::error::RpcError> {
                     [<$network Middleware>]::as_parity_middleware(self).trace_block(block).await
                 }
 
                 /// Return traces matching the given filter
-                async fn trace_filter(&self, filter: ethers::prelude::TraceFilter) -> Result<Vec<ethers::prelude::Trace>, crate::error::RpcError> {
+                async fn trace_filter(&self, filter: ethers_core::types::TraceFilter) -> Result<Vec<ethers_core::types::Trace>, crate::error::RpcError> {
                     [<$network Middleware>]::as_parity_middleware(self).trace_filter(filter).await
                 }
 
                 /// Returns trace at the given position
-                async fn trace_get(&self, hash: ethers::prelude::H256, index: Vec<ethers::prelude::U64>) -> Result<ethers::prelude::Trace, crate::error::RpcError> {
+                async fn trace_get(&self, hash: ethers_core::types::H256, index: Vec<ethers_core::types::U64>) -> Result<ethers_core::types::Trace, crate::error::RpcError> {
                     [<$network Middleware>]::as_parity_middleware(self).trace_get(hash, index).await
                 }
 
                 /// Returns all traces of a given transaction
-                async fn trace_transaction(&self, hash: ethers::prelude::H256) -> Result<Vec<ethers::prelude::Trace>, crate::error::RpcError> {
+                async fn trace_transaction(&self, hash: ethers_core::types::H256) -> Result<Vec<ethers_core::types::Trace>, crate::error::RpcError> {
                     [<$network Middleware>]::as_parity_middleware(self).trace_transaction(hash).await
                 }
 
                 /// Resolve an ENS name to an address
                 async fn ens_resolve(
                     &self,
-                    registry: Option<ethers::prelude::Address>,
+                    registry: Option<ethers_core::types::Address>,
                     ens_name: &str,
-                ) -> Result<ethers::prelude::Address, crate::error::RpcError> {
+                ) -> Result<ethers_core::types::Address, crate::error::RpcError> {
                     [<$network Middleware>]::as_middleware(self).ens_resolve(registry, ens_name).await
                 }
 
                 /// Look up the ENS name associated with an address
                 async fn ens_lookup(
                     &self,
-                    registry: Option<ethers::prelude::Address>,
-                    address: ethers::prelude::Address,
+                    registry: Option<ethers_core::types::Address>,
+                    address: ethers_core::types::Address,
                 ) -> Result<String, crate::error::RpcError> {
                     [<$network Middleware>]::as_middleware(self).ens_lookup(registry, address).await
                 }
@@ -567,8 +567,8 @@ macro_rules! impl_network_middleware {
                 async fn sign_transaction(
                     &self,
                     tx: &<$network as crate::networks::Network>::TransactionRequest,
-                    from: Address,
-                ) -> Result<ethers::prelude::Signature, crate::error::RpcError> {
+                    from: ethers_core::types::Address,
+                ) -> Result<ethers_core::types::Signature, crate::error::RpcError> {
                     [<$network Middleware>]::as_middleware(self).sign_transaction(tx, from).await
                 }
 
@@ -578,7 +578,7 @@ macro_rules! impl_network_middleware {
                 async fn send_transaction(
                     &self,
                     tx: &<$network as crate::networks::Network>::TransactionRequest,
-                    block: Option<ethers::prelude::BlockNumber>,
+                    block: Option<ethers_core::types::BlockNumber>,
                 ) -> Result<crate::watchers::pending_transaction::PendingTransaction<'_, $network>, crate::error::RpcError> {
                     crate::middleware::Middleware::send_transaction([<$network Middleware>]::as_middleware(self), tx, block).await
                 }
@@ -594,7 +594,7 @@ macro_rules! impl_network_middleware {
                     &'a self,
                     tx: &<$network as crate::networks::Network>::TransactionRequest,
                     escalations: usize,
-                    policy: ethers::prelude::EscalationPolicy,
+                    policy: crate::EscalationPolicy,
                 ) -> Result<crate::watchers::pending_escalator::EscalatingPending<'_, $network>, crate::error::RpcError> {
                     [<$network Middleware>]::as_middleware(self).send_escalating(tx, escalations, policy).await
                 }
@@ -602,13 +602,13 @@ macro_rules! impl_network_middleware {
                 /// Send the raw RLP encoded transaction to the entire Ethereum network and
                 /// returns the transaction's hash This will consume gas from the account
                 /// that signed the transaction.
-                async fn send_raw_transaction(&self, tx: ethers::prelude::Bytes) -> Result<crate::watchers::pending_transaction::PendingTransaction<'_, $network>, crate::error::RpcError> {
+                async fn send_raw_transaction(&self, tx: ethers_core::types::Bytes) -> Result<crate::watchers::pending_transaction::PendingTransaction<'_, $network>, crate::error::RpcError> {
 
                     crate::middleware::Middleware::send_raw_transaction([<$network Middleware>]::as_middleware(self), tx).await
                 }
 
                 /// Create a stream that repeatedly polls a log filter
-                async fn watch_new_logs(&self, filter: &ethers::prelude::Filter) -> Result<crate::watchers::filter_watcher::LogWatcher<$network>, crate::error::RpcError> {
+                async fn watch_new_logs(&self, filter: &ethers_core::types::Filter) -> Result<crate::watchers::filter_watcher::LogWatcher<$network>, crate::error::RpcError> {
                     [<$network Middleware>]::as_middleware(self).watch_new_logs(filter).await
 
                 }
