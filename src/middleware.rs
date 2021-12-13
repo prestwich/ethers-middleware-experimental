@@ -604,10 +604,17 @@ pub trait Middleware<N: Network>:
         policy: EscalationPolicy,
     ) -> Result<EscalatingPending<'_, N>, RpcError> {
         let this = Middleware::as_base_middleware(self);
-        let /*mut*/ original = tx.clone();
+        let mut original = tx.clone();
 
-        // TODO(James): fill_transaction
-        // self.fill_transaction(&mut original, None).await?;
+        self.fill_transaction(&mut original, None).await?;
+
+        // set the nonce, if no nonce is found
+        if original.nonce().is_none() {
+            let nonce = self
+                .get_transaction_count(tx.from().copied().unwrap_or_default(), None)
+                .await?;
+            original.set_nonce(nonce);
+        }
 
         let gas_price = original.gas_price().expect("filled");
         let chain_id = self.chain_id().await?.low_u64();

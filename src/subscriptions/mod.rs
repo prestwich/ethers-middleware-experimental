@@ -133,7 +133,7 @@ mod tests {
         utils::{Ganache, Geth},
     };
     use futures_util::{stream, FutureExt, StreamExt};
-    use std::{collections::HashSet, convert::TryFrom, time::Duration};
+    use std::collections::HashSet;
 
     #[tokio::test]
     async fn can_stream_pending_transactions() {
