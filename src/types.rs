@@ -84,12 +84,13 @@ pub struct JsonRpcRequest {
 #[derive(Deserialize, Debug)]
 pub struct JsonRpcResponse {
     pub(crate) id: u64,
+    #[allow(dead_code)]
     jsonrpc: String,
     #[serde(flatten)]
     pub result: RawResponse,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Deserialize, Debug, PartialEq, Clone)]
 /// A JSON-RPC Notifcation
 pub struct JsonRpcNotification {
     jsonrpc: String,
@@ -97,10 +98,16 @@ pub struct JsonRpcNotification {
     pub params: Notification,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Eq)]
+#[derive(Deserialize, Debug, Clone, Eq)]
 pub struct Notification {
     pub subscription: U256,
     pub result: Value,
+}
+
+impl PartialEq<Notification> for Notification {
+    fn eq(&self, other: &Notification) -> bool {
+        self.subscription == other.subscription && self.result == other.result
+    }
 }
 
 // for convience in quorum provider
@@ -134,11 +141,11 @@ pub trait RequestParams: Serialize + Send + Sync + Debug {
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct SyncDetails {
-    starting_block: u64,
-    current_block: u64,
-    highest_block: u64,
-    known_states: u64,
-    pulled_states: u64,
+    pub starting_block: u64,
+    pub current_block: u64,
+    pub highest_block: u64,
+    pub known_states: u64,
+    pub pulled_states: u64,
 }
 
 #[derive(Deserialize, Debug)]

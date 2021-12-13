@@ -193,7 +193,6 @@ where
     }
 
     fn install_listener(&self, id: U256) -> Result<UnboundedReceiver<Notification>, RpcError> {
-        let id = id.into();
         let mut notifications = Vec::with_capacity(self.providers.len());
         for provider in &self.providers {
             let weight = provider.weight;
@@ -419,34 +418,27 @@ impl QuorumStream {
         let fut = async move {
             let mut notifications = select_all(self.notifications).fuse();
             let quorum_weight = self.quorum_weight;
-            loop {
-                match notifications.next().await {
-                    Some((incoming, new_weight)) => {
-                        // update our table of responses
-                        let total_weight = self
-                            .responses
-                            .entry(incoming.clone())
-                            .and_modify(|e| {
-                                if *e < quorum_weight {
-                                    *e += new_weight;
-                                }
-                            })
-                            .or_insert(new_weight);
-
-                        // if the total weight was not previously above quorum,
-                        // but now is, dispatch the notification
-                        if *total_weight >= quorum_weight
-                            && *total_weight - new_weight < quorum_weight
-                        {
-                            if self.outbound.unbounded_send(incoming).is_err() {
-                                // channel is dead, close the loop
-
-                                break;
-                            }
+            while let Some((incoming, new_weight)) = notifications.next().await {
+                // update our table of responses
+                let total_weight = self
+                    .responses
+                    .entry(incoming.clone())
+                    .and_modify(|e| {
+                        if *e < quorum_weight {
+                            *e += new_weight;
                         }
+                    })
+                    .or_insert(new_weight);
+
+                // if the total weight was not previously above quorum,
+                // but now is, dispatch the notification
+                if *total_weight >= quorum_weight
+                    && *total_weight - new_weight < quorum_weight
+                {
+                    match self.outbound.unbounded_send(incoming) {
+                        Ok(_) => {}
+                        Err(_) => break
                     }
-                    // notifications are done, close the loop
-                    None => break,
                 }
             }
         };
