@@ -229,6 +229,11 @@ macro_rules! impl_network_middleware {
                     [<$network Middleware>]::as_base_middleware(self).default_sender()
                 }
 
+                /// Return the node client
+                async fn node_client(&self) -> Result<crate::types::NodeClient, crate::error::RpcError> {
+                    [<$network Middleware>]::as_base_middleware(self).node_client().await
+                }
+
                 /// Returns the current client version using the `web3_clientVersion` RPC.
                 async fn client_version(&self) -> Result<String, crate::error::RpcError> {
                     [<$network Middleware>]::as_base_middleware(self).client_version().await

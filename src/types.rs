@@ -3,7 +3,11 @@ use ethers_core::types::U256;
 use futures_channel::{mpsc, oneshot};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::Value;
-use std::fmt::{self, Debug};
+use std::{
+    convert::Infallible,
+    fmt::{self, Debug},
+    str::FromStr,
+};
 
 use crate::{connections::RpcConnection, error::RpcError};
 
@@ -172,6 +176,52 @@ pub(crate) enum Instruction {
     Subscribe { id: U256, sink: Subscription },
     /// Cancel an existing subscription
     Unsubscribe { id: U256 },
+}
+
+/// Node clients with potential client-specific behavior
+#[derive(Clone, Debug)]
+pub enum NodeClient {
+    Geth,
+    Erigon,
+    OpenEthereum,
+    Nethermind,
+    Besu,
+    Unknown(String),
+}
+
+impl NodeClient {
+    pub fn parity_like(&self) -> bool {
+        match self {
+            NodeClient::OpenEthereum => true,
+            _ => false,
+        }
+    }
+
+    pub fn geth_like(&self) -> bool {
+        match self {
+            NodeClient::Geth => true,
+            NodeClient::Erigon => true,
+            _ => false,
+        }
+    }
+}
+
+impl FromStr for NodeClient {
+    type Err = Infallible;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.split('/').next().map(|s| s.to_lowercase()) {
+            Some(name) => match name.as_ref() {
+                "geth" => Ok(NodeClient::Geth),
+                "erigon" => Ok(NodeClient::Erigon),
+                "openethereum" => Ok(NodeClient::OpenEthereum),
+                "nethermind" => Ok(NodeClient::Nethermind),
+                "besu" => Ok(NodeClient::Besu),
+                _ => Ok(NodeClient::Unknown(name)),
+            },
+            None => Ok(NodeClient::Unknown("".to_owned())),
+        }
+    }
 }
 
 #[cfg(test)]

@@ -1,4 +1,4 @@
-use crate::types::{JsonRpcError, RawResponse};
+use crate::types::{JsonRpcError, NodeClient, RawResponse};
 use futures_channel::oneshot;
 use thiserror::Error;
 use tokio_tungstenite::tungstenite::{self, protocol::CloseFrame};
@@ -45,6 +45,14 @@ pub enum RpcError {
     /// Retrying Provider reached max requests"
     #[error("Retrying Provider reached max requests")]
     MaxRequests(Box<Vec<RpcError>>),
+
+    #[error(
+        "Attempted to use {requested:?}-specific features while connected to a {using:?} node"
+    )]
+    UnsupportedClient {
+        using: NodeClient,
+        requested: NodeClient,
+    },
 
     /// Custom
     #[error("{0}")]

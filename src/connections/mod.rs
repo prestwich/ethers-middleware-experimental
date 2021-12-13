@@ -40,7 +40,7 @@ use crate::{
     networks::Network,
     rpc,
     subscriptions::{LogStream, NewBlockStream, PendingTransactionStream, SyncingStream},
-    types::{Notification, RawRequest, RawResponse, RequestParams},
+    types::{NodeClient, Notification, RawRequest, RawResponse, RequestParams},
 };
 
 async fn get_block_gen(
@@ -119,6 +119,13 @@ where
 
     fn provider(&self) -> &dyn RpcConnection {
         self
+    }
+
+    async fn node_client(&self) -> Result<NodeClient, RpcError> {
+        Ok(BaseMiddleware::<N>::client_version(self)
+            .await?
+            .parse()
+            .expect("infallible parse"))
     }
 
     async fn client_version(&self) -> Result<String, RpcError> {
