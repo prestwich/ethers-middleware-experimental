@@ -173,3 +173,46 @@ pub(crate) enum Instruction {
     /// Cancel an existing subscription
     Unsubscribe { id: U256 },
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn deser_response() {
+        let response: JsonRpcResponse =
+            serde_json::from_str(r#"{"jsonrpc": "2.0", "result": 19, "id": 1}"#).unwrap();
+        assert_eq!(response.id, 1);
+        assert_eq!(response.result.deserialize::<usize>().unwrap(), 19);
+    }
+
+    #[test]
+    fn ser_request() {
+        let req = JsonRpcRequest {
+            id: 300,
+            jsonrpc: "2.0",
+            request: RawRequest {
+                method: "method_name",
+                params: serde_json::to_value(()).unwrap(),
+            },
+        };
+
+        assert_eq!(
+            &serde_json::to_string(&req).unwrap(),
+            r#"{"id":300,"jsonrpc":"2.0","method":"method_name"}"#
+        );
+
+        let req = JsonRpcRequest {
+            id: 300,
+            jsonrpc: "2.0",
+            request: RawRequest {
+                method: "method_name",
+                params: serde_json::to_value(1).unwrap(),
+            },
+        };
+        assert_eq!(
+            &serde_json::to_string(&req).unwrap(),
+            r#"{"id":300,"jsonrpc":"2.0","method":"method_name","params":1}"#
+        );
+    }
+}

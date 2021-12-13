@@ -448,82 +448,82 @@ impl QuorumStream {
     }
 }
 
-// #[cfg(test)]
-// #[cfg(not(target_arch = "wasm32"))]
-// mod tests {
-//     use super::{Quorum, QuorumProvider, WeightedProvider};
-//     use crate::{Middleware, MockProvider, Provider};
-//     use ethers_core::types::U64;
+#[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
+mod tests {
+    use crate::{EthereumMiddleware, MockRpcConnection};
 
-//     async fn test_quorum(q: Quorum) {
-//         let num = 5u64;
-//         let value = U64::from(42);
-//         let mut providers = Vec::new();
-//         let mut mocked = Vec::new();
-//         for _ in 0..num {
-//             let mock = MockProvider::new();
-//             mock.push(value).unwrap();
-//             providers.push(WeightedProvider::new(mock.clone()));
-//             mocked.push(mock);
-//         }
-//         let quorum = QuorumProvider::builder()
-//             .add_providers(providers)
-//             .quorum(q)
-//             .build();
-//         let quorum_weight = quorum.quorum_weight;
+    use super::{Quorum, QuorumProvider, WeightedProvider};
+    use ethers_core::types::U64;
 
-//         let provider = Provider::quorum(quorum);
-//         let blk = provider.get_block_number().await.unwrap();
-//         assert_eq!(blk, value);
+    async fn test_quorum(q: Quorum) {
+        let num = 5u64;
+        let value = U64::from(42);
+        let mut providers = Vec::new();
+        let mut mocked = Vec::new();
+        for _ in 0..num {
+            let mock = MockRpcConnection::new();
+            mock.push(value).unwrap();
+            providers.push(WeightedProvider::new(mock.clone()));
+            mocked.push(mock);
+        }
+        let quorum = QuorumProvider::builder()
+            .add_providers(providers)
+            .quorum(q)
+            .build();
+        let quorum_weight = quorum.quorum_weight;
 
-//         // count the number of providers that returned a value
-//         let requested = mocked
-//             .iter()
-//             .filter(|mock| mock.assert_request("eth_blockNumber", ()).is_ok())
-//             .count();
+        let blk = quorum.get_block_number().await.unwrap();
+        assert_eq!(blk, value);
 
-//         match q {
-//             Quorum::All => {
-//                 assert_eq!(requested as u64, num);
-//             }
-//             Quorum::Majority => {
-//                 assert_eq!(requested as u64, quorum_weight);
-//             }
-//             Quorum::Percentage(pct) => {
-//                 let expected = num * (pct as u64) / 100;
-//                 assert_eq!(requested, expected as usize);
-//             }
-//             Quorum::ProviderCount(count) => {
-//                 assert_eq!(requested, count);
-//             }
-//             Quorum::Weight(w) => {
-//                 assert_eq!(requested as u64, w);
-//             }
-//         }
-//     }
+        // count the number of providers that returned a value
+        let requested = mocked
+            .iter()
+            .filter(|mock| mock.assert_request("eth_blockNumber", ()).is_ok())
+            .count();
 
-//     #[tokio::test]
-//     async fn majority_quorum() {
-//         test_quorum(Quorum::Majority).await
-//     }
+        match q {
+            Quorum::All => {
+                assert_eq!(requested as u64, num);
+            }
+            Quorum::Majority => {
+                assert_eq!(requested as u64, quorum_weight);
+            }
+            Quorum::Percentage(pct) => {
+                let expected = num * (pct as u64) / 100;
+                assert_eq!(requested, expected as usize);
+            }
+            Quorum::ProviderCount(count) => {
+                assert_eq!(requested, count);
+            }
+            Quorum::Weight(w) => {
+                assert_eq!(requested as u64, w);
+            }
+        }
+    }
 
-//     #[tokio::test]
-//     async fn percentage_quorum() {
-//         test_quorum(Quorum::Percentage(100)).await
-//     }
+    #[tokio::test]
+    async fn majority_quorum() {
+        test_quorum(Quorum::Majority).await
+    }
 
-//     #[tokio::test]
-//     async fn count_quorum() {
-//         test_quorum(Quorum::ProviderCount(3)).await
-//     }
+    #[tokio::test]
+    async fn percentage_quorum() {
+        test_quorum(Quorum::Percentage(100)).await
+    }
 
-//     #[tokio::test]
-//     async fn weight_quorum() {
-//         test_quorum(Quorum::Weight(5)).await
-//     }
+    #[tokio::test]
+    async fn count_quorum() {
+        test_quorum(Quorum::ProviderCount(3)).await
+    }
 
-//     #[tokio::test]
-//     async fn all_quorum() {
-//         test_quorum(Quorum::All).await
-//     }
-// }
+    #[tokio::test]
+    async fn weight_quorum() {
+        test_quorum(Quorum::Weight(5)).await
+    }
+
+    #[tokio::test]
+    async fn all_quorum() {
+        test_quorum(Quorum::All).await
+    }
+}

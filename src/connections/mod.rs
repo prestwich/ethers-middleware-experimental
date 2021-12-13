@@ -648,6 +648,3 @@ where
         rpc::dispatch_unsubscribe(self, &subscription_id.into()).await
     }
 }
-
-#[cfg(test)]
-mod test {}
