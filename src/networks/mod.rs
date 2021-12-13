@@ -1,5 +1,5 @@
 pub mod ethereum;
-pub use ethereum::{Ethereum, EthereumMiddleware};
+pub use ethereum::{Ethereum, EthereumMiddleware, EthereumPubSubMiddleware};
 
 use ethers_core::types::{
     transaction::eip2930::AccessList, Address, Bytes, NameOrAddress, Signature, H256, U256, U64,

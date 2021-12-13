@@ -234,6 +234,12 @@ macro_rules! impl_network_middleware {
                     [<$network Middleware>]::as_base_middleware(self).client_version().await
                 }
 
+                /// Returns the current network version using the `net_version` RPC
+                async fn net_version(&self) -> Result<U64, crate::error::RpcError> {
+                    [<$network Middleware>]::as_base_middleware(self).net_version().await
+                }
+
+
                 /// Gets the latest block number via the `eth_BlockNumber` API
                 async fn get_block_number(&self) -> Result<ethers_core::types::U64, crate::error::RpcError> {
                     [<$network Middleware>]::as_base_middleware(self).get_block_number().await
@@ -258,7 +264,7 @@ macro_rules! impl_network_middleware {
                 }
 
                 /// Gets the block uncle count at `block_hash_or_number`
-                async fn get_uncle_count(&self, block_hash_or_number: ethers_core::types::BlockId) -> Result<U256, crate::error::RpcError> {
+                async fn get_uncle_count(&self, block_hash_or_number: ethers_core::types::BlockId) -> Result<ethers_core::types::U256, crate::error::RpcError> {
                     [<$network Middleware>]::as_base_middleware(self)
                         .get_uncle_count(block_hash_or_number)
                         .await
@@ -654,6 +660,67 @@ macro_rules! impl_network_middleware {
 
                 #[doc(hidden)]
                 fn as_middleware(&self) -> &dyn Middleware<$network> {
+                    self
+                }
+            }
+
+            #[async_trait::async_trait]
+            pub trait [<$network PubSubMiddleware>]:
+                [<$network Middleware>]
+                + crate::middleware::PubSubMiddleware<$network>
+                + std::fmt::Debug
+                + Send
+                + Sync
+            {
+                #[doc(hidden)]
+                fn as_pubsub_middleware(&self) -> &dyn crate::middleware::PubSubMiddleware<$network>;
+
+                async fn subscribe_new_heads(&self) -> Result<ethers_core::types::U256, crate::error::RpcError> {
+                    [<$network PubSubMiddleware>]::as_pubsub_middleware(self).subscribe_new_heads().await
+                }
+
+                async fn subscribe_logs(&self, filter: &ethers_core::types::Filter) -> Result<ethers_core::types::U256, crate::error::RpcError> {
+                    [<$network PubSubMiddleware>]::as_pubsub_middleware(self).subscribe_logs(filter).await
+                }
+
+                async fn subscribe_new_pending_transactions(&self) -> Result<ethers_core::types::U256, crate::error::RpcError> {
+                    [<$network PubSubMiddleware>]::as_pubsub_middleware(self)
+                        .subscribe_new_pending_transactions()
+                        .await
+                }
+
+                async fn subscribe_syncing(&self) -> Result<ethers_core::types::U256, crate::error::RpcError> {
+                    [<$network PubSubMiddleware>]::as_pubsub_middleware(self).subscribe_syncing().await
+                }
+
+                async fn stream_new_heads(&self) -> Result<crate::subscriptions::NewBlockStream<$network>, crate::error::RpcError> {
+                    [<$network PubSubMiddleware>]::as_pubsub_middleware(self).stream_new_heads().await
+                }
+
+                async fn stream_logs(&self, filter: &ethers_core::types::Filter) -> Result<crate::subscriptions::LogStream<$network>, crate::error::RpcError> {
+                    [<$network PubSubMiddleware>]::as_pubsub_middleware(self).stream_logs(filter).await
+                }
+
+                async fn stream_new_pending_transactions(
+                    &self,
+                ) -> Result<crate::subscriptions::PendingTransactionStream<$network>, crate::error::RpcError> {
+                    [<$network PubSubMiddleware>]::as_pubsub_middleware(self).stream_new_pending_transactions().await
+                }
+
+                async fn stream_syncing(&self) -> Result<crate::subscriptions::SyncingStream<$network>, crate::error::RpcError> {
+                    [<$network PubSubMiddleware>]::as_pubsub_middleware(self).stream_syncing().await
+                }
+
+                async fn unsubscribe(&self, subscription_id: ethers_core::types::U256) -> Result<bool, crate::error::RpcError> {
+                    [<$network PubSubMiddleware>]::as_pubsub_middleware(self).unsubscribe(subscription_id).await
+                }
+            }
+
+            impl<T> [<$network PubSubMiddleware>] for T
+            where
+                T: crate::middleware::PubSubMiddleware<$network>
+            {
+                fn as_pubsub_middleware(&self) -> &dyn crate::middleware::PubSubMiddleware<$network> {
                     self
                 }
             }
