@@ -36,7 +36,7 @@ impl RawRequest {
 
     /// Access the request method
     pub fn method(&self) -> &str {
-        &self.method
+        self.method
     }
 
     /// Read the request params
@@ -156,10 +156,7 @@ pub trait RequestParams: Serialize + Send + Sync + Debug {
     type Response: DeserializeOwned + std::fmt::Debug;
 
     fn to_raw_request(&self) -> RawRequest {
-        RawRequest {
-            method: Self::METHOD,
-            params: serde_json::to_value(self).expect("value ser doesn't fail"),
-        }
+        RawRequest::new(Self::METHOD, self).expect("value ser doesn't fail")
     }
 
     async fn send_via(&self, connection: &dyn RpcConnection) -> Result<Self::Response, RpcError> {

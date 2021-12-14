@@ -381,11 +381,27 @@ where
         last_block: BlockNumber,
         reward_percentiles: &[f64],
     ) -> Result<FeeHistory, RpcError> {
-        rpc::dispatch_fee_history(
+        // try the proper way first
+        let first = rpc::dispatch_fee_history(
             self,
             &rpc::FeeHistoryParams(block_count, last_block, reward_percentiles.to_vec()),
         )
-        .await
+        .await;
+
+        // only try the legacy way if the good way doesn't work
+        if first.is_err() {
+            rpc::dispatch_legacy_fee_history(
+                self,
+                &rpc::LegacyFeeHistoryParams(
+                    block_count.low_u64(),
+                    last_block,
+                    reward_percentiles.to_vec(),
+                ),
+            )
+            .await
+        } else {
+            first
+        }
     }
 }
 

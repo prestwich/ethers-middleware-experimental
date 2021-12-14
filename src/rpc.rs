@@ -255,6 +255,14 @@ impl_rpc!(
     response: FeeHistory,
 );
 
+// for legacy compatibility
+impl_rpc!(
+    "eth_feeHistory",
+    LegacyFeeHistory,
+    params: [u64, BlockNumber, Vec<f64> ],
+    response: FeeHistory,
+);
+
 impl_rpc!(
     "eth_subscribe",
     SubscribeHeads,
