@@ -305,12 +305,14 @@ where
             Ok(Incoming::Response(resp)) => {
                 let req_id = resp.id;
                 if let Some(request) = self.pending.remove(&req_id) {
-                    request.send(Ok(resp.result)).map_err(|_| {
-                        WsError::ChannelError(format!(
-                            "failed to return response via channel for id {}",
-                            req_id
-                        ))
-                    })?;
+                    if !request.is_canceled() {
+                        request.send(Ok(resp.result)).map_err(|_| {
+                            WsError::ChannelError(format!(
+                                "failed to return response via channel for id {}",
+                                req_id
+                            ))
+                        })?;
+                    }
                 }
             }
             Ok(Incoming::Notification(notification)) => {

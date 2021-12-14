@@ -20,6 +20,15 @@
 - [x] renames
   - [x] `provider.rs` to `connections/mod.rs`
   - [x] `transports/` to `connections/`
+- [ ] Ensure tests are enabled
+- [ ] Improve rustdoc and doctests
+- [ ] backports
+  - [ ] [dev-rpc](https://github.com/gakonst/ethers-rs/pull/640/)
+  - [ ] [fix noncetoolow parser](https://github.com/gakonst/ethers-rs/pull/643)
+  - [x] [fix send canceled](https://github.com/gakonst/ethers-rs/commit/8d07610e4a39b461482738dfcb39f88caa60cd67#diff-1fd8e701f7ec17b179805a6da8105e3d441f1d36966dca5021589a06f3c1a9f7)
+  - [ ] [fix noncetoolow2](https://github.com/gakonst/ethers-rs/pull/655/files)
+  - [ ] [fee history block count as quantity](https://github.com/gakonst/ethers-rs/pull/668)
+  - [ ] [block count as quantity2](https://github.com/gakonst/ethers-rs/pull/669)
 
 ## Stretch Goals
 
