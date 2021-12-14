@@ -73,6 +73,13 @@ impl_rpc!(
     response: Vec<TransactionReceipt>,
 );
 
+impl_rpc!(
+    "parity_getBlockReceipts",
+    ParityGetBlockReceipts,
+    param: BlockNumber,
+    response: Vec<TransactionReceipt>,
+);
+
 impl_rpc!("eth_gasPrice", GasPrice, response: U256);
 
 impl_rpc!("eth_accounts", Accounts, response: Vec<Address>);

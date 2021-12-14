@@ -190,19 +190,16 @@ pub enum NodeClient {
 }
 
 impl NodeClient {
-    pub fn parity_like(&self) -> bool {
-        match self {
-            NodeClient::OpenEthereum => true,
-            _ => false,
-        }
+    pub fn parity_block_receipts(&self) -> bool {
+        matches!(self, NodeClient::OpenEthereum | NodeClient::Nethermind)
+    }
+
+    pub fn parity_trace(&self) -> bool {
+        matches!(self, &NodeClient::OpenEthereum)
     }
 
     pub fn geth_like(&self) -> bool {
-        match self {
-            NodeClient::Geth => true,
-            NodeClient::Erigon => true,
-            _ => false,
-        }
+        matches!(self, NodeClient::Geth | NodeClient::Erigon)
     }
 }
 

@@ -215,7 +215,14 @@ where
         &self,
         block: BlockNumber,
     ) -> Result<Vec<TransactionReceipt>, RpcError> {
-        rpc::dispatch_get_block_receipts(self, &block.into()).await
+        if BaseMiddleware::<N>::node_client(self)
+            .await?
+            .parity_block_receipts()
+        {
+            rpc::dispatch_parity_get_block_receipts(self, &block.into()).await
+        } else {
+            rpc::dispatch_get_block_receipts(self, &block.into()).await
+        }
     }
 
     /// Gets the current gas price as estimated by the node

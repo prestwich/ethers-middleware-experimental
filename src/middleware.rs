@@ -386,9 +386,9 @@ pub trait ParityMiddleware<N: Network>: BaseMiddleware<N> + Send + Sync {
     fn inner_parity(&self) -> &dyn ParityMiddleware<N>;
 
     #[doc(hidden)]
-    async fn parity_supported(&self) -> Result<(), RpcError> {
+    async fn trace_supported(&self) -> Result<(), RpcError> {
         let client = self.as_base_middleware().node_client().await?;
-        if !client.parity_like() {
+        if !client.parity_trace() {
             return Err(RpcError::UnsupportedClient {
                 using: client,
                 requested: NodeClient::OpenEthereum,
@@ -405,7 +405,7 @@ pub trait ParityMiddleware<N: Network>: BaseMiddleware<N> + Send + Sync {
         trace_type: Vec<TraceType>,
         block: Option<BlockNumber>,
     ) -> Result<BlockTrace, RpcError> {
-        self.parity_supported().await?;
+        self.trace_supported().await?;
         self.inner_parity().trace_call(req, trace_type, block).await
     }
 
@@ -415,7 +415,7 @@ pub trait ParityMiddleware<N: Network>: BaseMiddleware<N> + Send + Sync {
         data: Bytes,
         trace_type: Vec<TraceType>,
     ) -> Result<BlockTrace, RpcError> {
-        self.parity_supported().await?;
+        self.trace_supported().await?;
         self.inner_parity()
             .trace_raw_transaction(data, trace_type)
             .await
@@ -427,7 +427,7 @@ pub trait ParityMiddleware<N: Network>: BaseMiddleware<N> + Send + Sync {
         hash: H256,
         trace_type: Vec<TraceType>,
     ) -> Result<BlockTrace, RpcError> {
-        self.parity_supported().await?;
+        self.trace_supported().await?;
         self.inner_parity()
             .trace_replay_transaction(hash, trace_type)
             .await
@@ -439,7 +439,7 @@ pub trait ParityMiddleware<N: Network>: BaseMiddleware<N> + Send + Sync {
         block: BlockNumber,
         trace_type: Vec<TraceType>,
     ) -> Result<Vec<BlockTrace>, RpcError> {
-        self.parity_supported().await?;
+        self.trace_supported().await?;
         self.inner_parity()
             .trace_replay_block_transactions(block, trace_type)
             .await
@@ -447,25 +447,25 @@ pub trait ParityMiddleware<N: Network>: BaseMiddleware<N> + Send + Sync {
 
     /// Returns traces created at given block
     async fn trace_block(&self, block: BlockNumber) -> Result<Vec<Trace>, RpcError> {
-        self.parity_supported().await?;
+        self.trace_supported().await?;
         self.inner_parity().trace_block(block).await
     }
 
     /// Return traces matching the given filter
     async fn trace_filter(&self, filter: TraceFilter) -> Result<Vec<Trace>, RpcError> {
-        self.parity_supported().await?;
+        self.trace_supported().await?;
         self.inner_parity().trace_filter(filter).await
     }
 
     /// Returns trace at the given position
     async fn trace_get(&self, hash: H256, index: Vec<U64>) -> Result<Trace, RpcError> {
-        self.parity_supported().await?;
+        self.trace_supported().await?;
         self.inner_parity().trace_get(hash, index).await
     }
 
     /// Returns all traces of a given transaction
     async fn trace_transaction(&self, hash: H256) -> Result<Vec<Trace>, RpcError> {
-        self.parity_supported().await?;
+        self.trace_supported().await?;
         self.inner_parity().trace_transaction(hash).await
     }
 }
