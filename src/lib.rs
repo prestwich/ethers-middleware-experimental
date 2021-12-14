@@ -18,6 +18,10 @@ pub use watchers::*;
 
 pub mod subscriptions;
 
+// feature-enabled support for dev-rpc methods
+#[cfg(feature = "dev-rpc")]
+pub use middleware::dev_rpc::DevRpcMiddleware;
+
 // TODO: REMOVE FROM HERE
 
 pub type EscalationPolicy =

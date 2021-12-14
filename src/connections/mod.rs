@@ -75,10 +75,7 @@ pub trait RpcConnection: Debug + Send + Sync {
         S: Serialize + Send + Sync,
         Self: Sized,
     {
-        let request = RawRequest {
-            method,
-            params: serde_json::to_value(&params)?,
-        };
+        let request = RawRequest::new(method, params)?;
         self._request(request).await
     }
 

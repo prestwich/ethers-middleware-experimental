@@ -1,3 +1,6 @@
+#[cfg(feature = "dev-rpc")]
+pub mod dev_rpc;
+
 use std::fmt::Debug;
 
 use async_trait::async_trait;
@@ -339,7 +342,7 @@ pub trait GethMiddleware<N: Network>: BaseMiddleware<N> + Send + Sync {
     fn inner_geth(&self) -> &dyn GethMiddleware<N>;
 
     #[doc(hidden)]
-    async fn geth_supported(&self) -> Result<(), RpcError> {
+    async fn ensure_geth_supported(&self) -> Result<(), RpcError> {
         let client = self.as_base_middleware().node_client().await?;
         if !client.geth_like() {
             return Err(RpcError::UnsupportedClient {
@@ -355,7 +358,7 @@ pub trait GethMiddleware<N: Network>: BaseMiddleware<N> + Send + Sync {
     /// block(s), as well as the ones that are being scheduled for future execution only.
     /// Ref: [Here](https://geth.ethereum.org/docs/rpc/ns-txpool#txpool_content)
     async fn txpool_content(&self) -> Result<TxpoolContent, RpcError> {
-        self.geth_supported().await?;
+        self.ensure_geth_supported().await?;
         self.inner_geth().txpool_content().await
     }
 
@@ -363,7 +366,7 @@ pub trait GethMiddleware<N: Network>: BaseMiddleware<N> + Send + Sync {
     /// block(s), as well as the ones that are being scheduled for future execution only.
     /// Ref: [Here](https://geth.ethereum.org/docs/rpc/ns-txpool#txpool_inspect)
     async fn txpool_inspect(&self) -> Result<TxpoolInspect, RpcError> {
-        self.geth_supported().await?;
+        self.ensure_geth_supported().await?;
         self.inner_geth().txpool_inspect().await
     }
 
@@ -371,7 +374,7 @@ pub trait GethMiddleware<N: Network>: BaseMiddleware<N> + Send + Sync {
     /// well as the ones that are being scheduled for future execution only.
     /// Ref: [Here](https://geth.ethereum.org/docs/rpc/ns-txpool#txpool_status)
     async fn txpool_status(&self) -> Result<TxpoolStatus, RpcError> {
-        self.geth_supported().await?;
+        self.ensure_geth_supported().await?;
         self.inner_geth().txpool_status().await
     }
 }
@@ -386,9 +389,9 @@ pub trait ParityMiddleware<N: Network>: BaseMiddleware<N> + Send + Sync {
     fn inner_parity(&self) -> &dyn ParityMiddleware<N>;
 
     #[doc(hidden)]
-    async fn trace_supported(&self) -> Result<(), RpcError> {
+    async fn ensure_trace_supported(&self) -> Result<(), RpcError> {
         let client = self.as_base_middleware().node_client().await?;
-        if !client.parity_trace() {
+        if !client.supports_trace() {
             return Err(RpcError::UnsupportedClient {
                 using: client,
                 requested: NodeClient::OpenEthereum,
@@ -405,7 +408,7 @@ pub trait ParityMiddleware<N: Network>: BaseMiddleware<N> + Send + Sync {
         trace_type: Vec<TraceType>,
         block: Option<BlockNumber>,
     ) -> Result<BlockTrace, RpcError> {
-        self.trace_supported().await?;
+        self.ensure_trace_supported().await?;
         self.inner_parity().trace_call(req, trace_type, block).await
     }
 
@@ -415,7 +418,7 @@ pub trait ParityMiddleware<N: Network>: BaseMiddleware<N> + Send + Sync {
         data: Bytes,
         trace_type: Vec<TraceType>,
     ) -> Result<BlockTrace, RpcError> {
-        self.trace_supported().await?;
+        self.ensure_trace_supported().await?;
         self.inner_parity()
             .trace_raw_transaction(data, trace_type)
             .await
@@ -427,7 +430,7 @@ pub trait ParityMiddleware<N: Network>: BaseMiddleware<N> + Send + Sync {
         hash: H256,
         trace_type: Vec<TraceType>,
     ) -> Result<BlockTrace, RpcError> {
-        self.trace_supported().await?;
+        self.ensure_trace_supported().await?;
         self.inner_parity()
             .trace_replay_transaction(hash, trace_type)
             .await
@@ -439,7 +442,7 @@ pub trait ParityMiddleware<N: Network>: BaseMiddleware<N> + Send + Sync {
         block: BlockNumber,
         trace_type: Vec<TraceType>,
     ) -> Result<Vec<BlockTrace>, RpcError> {
-        self.trace_supported().await?;
+        self.ensure_trace_supported().await?;
         self.inner_parity()
             .trace_replay_block_transactions(block, trace_type)
             .await
@@ -447,25 +450,25 @@ pub trait ParityMiddleware<N: Network>: BaseMiddleware<N> + Send + Sync {
 
     /// Returns traces created at given block
     async fn trace_block(&self, block: BlockNumber) -> Result<Vec<Trace>, RpcError> {
-        self.trace_supported().await?;
+        self.ensure_trace_supported().await?;
         self.inner_parity().trace_block(block).await
     }
 
     /// Return traces matching the given filter
     async fn trace_filter(&self, filter: TraceFilter) -> Result<Vec<Trace>, RpcError> {
-        self.trace_supported().await?;
+        self.ensure_trace_supported().await?;
         self.inner_parity().trace_filter(filter).await
     }
 
     /// Returns trace at the given position
     async fn trace_get(&self, hash: H256, index: Vec<U64>) -> Result<Trace, RpcError> {
-        self.trace_supported().await?;
+        self.ensure_trace_supported().await?;
         self.inner_parity().trace_get(hash, index).await
     }
 
     /// Returns all traces of a given transaction
     async fn trace_transaction(&self, hash: H256) -> Result<Vec<Trace>, RpcError> {
-        self.trace_supported().await?;
+        self.ensure_trace_supported().await?;
         self.inner_parity().trace_transaction(hash).await
     }
 }

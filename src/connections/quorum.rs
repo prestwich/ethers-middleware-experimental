@@ -133,10 +133,7 @@ where
         let mut numbers = join_all(self.providers.iter().map(|provider| async move {
             let block = provider
                 .inner
-                ._request(RawRequest {
-                    method: "eth_blockNumber",
-                    params: serde_json::json!(()),
-                })
+                ._request(RawRequest::new("eth_blockNumber", ())?)
                 .await?
                 .into_result()?;
             serde_json::from_value::<U64>(block).map_err(RpcError::from)
@@ -154,7 +151,7 @@ where
 
     /// Normalizes the request payload depending on the call
     async fn normalize_request(&self, request: &mut RawRequest) {
-        match request.method {
+        match request.method() {
             "eth_call"
             | "eth_createAccessList"
             | "eth_getStorageAt"
@@ -163,7 +160,11 @@ where
             | "trace_call"
             | "trace_block" => {
                 // calls that include the block number in the params at the last index of json array
-                if let Some(block) = request.params.as_array_mut().and_then(|arr| arr.last_mut()) {
+                if let Some(block) = request
+                    .mut_params()
+                    .as_array_mut()
+                    .and_then(|arr| arr.last_mut())
+                {
                     if Some("latest") == block.as_str() {
                         // replace `latest` with the minimum block height of all providers
                         if let Ok(minimum) = self

@@ -35,7 +35,7 @@ impl RpcConnection for MockRpcConnection {
         self.requests
             .lock()
             .unwrap()
-            .push_back((request.method.to_owned(), request.params));
+            .push_back((request.method().to_owned(), request.params().clone()));
         let mut responses = self.responses.lock().unwrap();
         let response = responses
             .pop_back()

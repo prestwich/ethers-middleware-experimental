@@ -63,7 +63,7 @@ where
                             backoff_seconds,
                             retries_remaining = self.max_requests - i - 1,
                             error = %e,
-                            method = %request.method,
+                            method = %request.method(),
                             "Error in retrying provider",
                         );
                         errors.push(e);

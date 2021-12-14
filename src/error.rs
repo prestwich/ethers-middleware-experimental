@@ -57,6 +57,11 @@ pub enum RpcError {
     /// Custom
     #[error("{0}")]
     CustomError(String),
+
+    #[cfg(feature = "dev-rpc")]
+    /// No DevRPC snapshot available
+    #[error("No snapshot")]
+    NoSnapshot,
 }
 
 #[derive(Error, Debug)]

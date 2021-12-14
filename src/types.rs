@@ -17,9 +17,37 @@ fn null_params(value: &Value) -> bool {
 
 #[derive(Serialize, Debug, Clone, PartialEq)]
 pub struct RawRequest {
-    pub method: &'static str,
+    method: &'static str,
     #[serde(skip_serializing_if = "null_params")]
-    pub params: Value,
+    params: Value,
+}
+
+impl RawRequest {
+    /// Instantate a new request from method and params
+    pub fn new<S>(method: &'static str, params: S) -> Result<Self, serde_json::Error>
+    where
+        S: Serialize,
+    {
+        Ok(RawRequest {
+            method,
+            params: serde_json::to_value(params)?,
+        })
+    }
+
+    /// Access the request method
+    pub fn method(&self) -> &str {
+        &self.method
+    }
+
+    /// Read the request params
+    pub fn params(&self) -> &Value {
+        &self.params
+    }
+
+    /// Get a mutable borrow of the params
+    pub fn mut_params(&mut self) -> &mut Value {
+        &mut self.params
+    }
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq)]
@@ -194,8 +222,8 @@ impl NodeClient {
         matches!(self, NodeClient::OpenEthereum | NodeClient::Nethermind)
     }
 
-    pub fn parity_trace(&self) -> bool {
-        matches!(self, &NodeClient::OpenEthereum)
+    pub fn supports_trace(&self) -> bool {
+        matches!(self, NodeClient::OpenEthereum | NodeClient::Nethermind)
     }
 
     pub fn geth_like(&self) -> bool {
