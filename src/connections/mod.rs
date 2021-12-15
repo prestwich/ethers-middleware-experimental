@@ -34,11 +34,14 @@ use std::fmt::Debug;
 
 use crate::{
     error::RpcError,
-    middleware::{BaseMiddleware, GethMiddleware, Middleware, ParityMiddleware, PubSubMiddleware},
+    middleware::{
+        maybe, BaseMiddleware, GethMiddleware, Middleware, ParityMiddleware, PubSubMiddleware,
+    },
     networks::Network,
     rpc,
     subscriptions::{LogStream, NewBlockStream, PendingTransactionStream, SyncingStream},
     types::{NodeClient, Notification, RawRequest, RawResponse, RequestParams},
+    Eip1559Fees, Txn,
 };
 
 async fn get_block_gen(
@@ -301,9 +304,7 @@ where
     ) -> Result<TxHash, RpcError> {
         let _block = block.unwrap_or(BlockNumber::Latest);
 
-        // TODO: fill_transaction
         rpc::dispatch_send_transaction(self, &serde_json::to_value(tx)?.into()).await
-        // todo!()
     }
 
     async fn send_raw_transaction(&self, tx: Bytes) -> Result<TxHash, RpcError> {
@@ -537,6 +538,78 @@ where
 
     fn as_parity_middleware(&self) -> &dyn ParityMiddleware<N> {
         self
+    }
+
+    /// Helper for filling a transaction
+    async fn fill_transaction(
+        &self,
+        tx: &mut N::TransactionRequest,
+        block: Option<BlockNumber>,
+    ) -> Result<(), RpcError> {
+        if let Some(default_sender) = BaseMiddleware::<N>::default_sender(self) {
+            if tx.from().is_none() {
+                tx.set_from(default_sender);
+            }
+        }
+
+        // TODO: Can we poll the futures below at the same time?
+        // Access List + Name resolution and then Gas price + Gas
+
+        // set the ENS name
+        if let Some(NameOrAddress::Name(ref ens_name)) = tx.to() {
+            let addr = Middleware::<N>::ens_resolve(self, None, ens_name).await?;
+            tx.set_to(addr);
+        }
+
+        // estimate the gas without the access list
+        let gas = maybe(
+            tx.gas().cloned(),
+            BaseMiddleware::<N>::estimate_gas(self, tx),
+        )
+        .await?;
+        let mut al_used = false;
+
+        // set the access lists
+        if let Some(access_list) = tx.access_list() {
+            if access_list.0.is_empty() {
+                if let Ok(al_with_gas) =
+                    BaseMiddleware::<N>::create_access_list(self, tx, block).await
+                {
+                    // only set the access list if the used gas is less than the
+                    // normally estimated gas
+                    if al_with_gas.gas_used < gas {
+                        tx.set_access_list(al_with_gas.access_list);
+                        tx.set_gas(al_with_gas.gas_used);
+                        al_used = true;
+                    }
+                }
+            }
+        }
+
+        if !al_used {
+            tx.set_gas(gas);
+        }
+
+        if tx.recommend_1559() {
+            let fees = tx.get_1559_fees();
+
+            if fees.max_fee_per_gas.is_none() || fees.max_priority_fee_per_gas.is_none() {
+                let (max_fee_per_gas, max_priority_fee_per_gas) =
+                    Middleware::<N>::estimate_eip1559_fees(self, None).await?;
+
+                let fees = Eip1559Fees {
+                    max_fee_per_gas: Some(max_fee_per_gas),
+                    max_priority_fee_per_gas: Some(max_priority_fee_per_gas),
+                };
+
+                tx.set_1559_fees(&fees);
+            };
+        } else {
+            let gas_price = maybe(tx.gas_price(), BaseMiddleware::<N>::gas_price(self)).await?;
+            tx.set_gas_price(gas_price);
+        }
+
+        Ok(())
     }
 
     async fn ens_resolve(

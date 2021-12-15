@@ -8,9 +8,8 @@ use ethers_core::{
     types::{
         transaction::{eip2718::TypedTransaction, eip2930::AccessListWithGasUsed},
         Address, Block, BlockId, BlockNumber, BlockTrace, Bytes, EIP1186ProofResponse, FeeHistory,
-        Filter, Log, NameOrAddress, Selector, Signature, Trace, TraceFilter, TraceType,
-        Transaction, TransactionReceipt, TxHash, TxpoolContent, TxpoolInspect, TxpoolStatus, H256,
-        U256, U64,
+        Filter, Log, Selector, Signature, Trace, TraceFilter, TraceType, Transaction,
+        TransactionReceipt, TxHash, TxpoolContent, TxpoolInspect, TxpoolStatus, H256, U256, U64,
     },
 };
 use futures_core::Future;
@@ -27,7 +26,7 @@ use crate::{
     pending_transaction::PendingTransaction,
     subscriptions::{LogStream, NewBlockStream, PendingTransactionStream, SyncingStream},
     types::NodeClient,
-    Eip1559Fees, EscalationPolicy,
+    EscalationPolicy,
 };
 
 /// Calls the future if `item` is None, otherwise returns a `futures::ok`
@@ -561,64 +560,7 @@ pub trait Middleware<N: Network>:
         tx: &mut N::TransactionRequest,
         block: Option<BlockNumber>,
     ) -> Result<(), RpcError> {
-        if let Some(default_sender) = self.default_sender() {
-            if tx.from().is_none() {
-                tx.set_from(default_sender);
-            }
-        }
-
-        // TODO: Can we poll the futures below at the same time?
-        // Access List + Name resolution and then Gas price + Gas
-
-        // set the ENS name
-        if let Some(NameOrAddress::Name(ref ens_name)) = tx.to() {
-            let addr = self.ens_resolve(None, ens_name).await?;
-            tx.set_to(addr);
-        }
-
-        // estimate the gas without the access list
-        let gas = maybe(tx.gas().cloned(), self.estimate_gas(tx)).await?;
-        let mut al_used = false;
-
-        // set the access lists
-        if let Some(access_list) = tx.access_list() {
-            if access_list.0.is_empty() {
-                if let Ok(al_with_gas) = self.create_access_list(tx, block).await {
-                    // only set the access list if the used gas is less than the
-                    // normally estimated gas
-                    if al_with_gas.gas_used < gas {
-                        tx.set_access_list(al_with_gas.access_list);
-                        tx.set_gas(al_with_gas.gas_used);
-                        al_used = true;
-                    }
-                }
-            }
-        }
-
-        if !al_used {
-            tx.set_gas(gas);
-        }
-
-        if tx.recommend_1559() {
-            let fees = tx.get_1559_fees();
-
-            if fees.max_fee_per_gas.is_none() || fees.max_priority_fee_per_gas.is_none() {
-                let (max_fee_per_gas, max_priority_fee_per_gas) =
-                    self.estimate_eip1559_fees(None).await?;
-
-                let fees = Eip1559Fees {
-                    max_fee_per_gas: Some(max_fee_per_gas),
-                    max_priority_fee_per_gas: Some(max_priority_fee_per_gas),
-                };
-
-                tx.set_1559_fees(&fees);
-            };
-        } else {
-            let gas_price = maybe(tx.gas_price(), self.gas_price()).await?;
-            tx.set_gas_price(gas_price);
-        }
-
-        Ok(())
+        self.inner().fill_transaction(tx, block).await
     }
 
     /// Sign a transaction, if a signer is available
