@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use ethers_core::types::U256;
 use futures_channel::{mpsc, oneshot};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -150,7 +149,8 @@ impl std::hash::Hash for Notification {
     }
 }
 
-#[async_trait]
+#[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 pub trait RequestParams: Serialize + Send + Sync + Debug {
     const METHOD: &'static str;
     type Response: DeserializeOwned + std::fmt::Debug;

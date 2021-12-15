@@ -45,7 +45,7 @@ pub(crate) fn interval(duration: Duration) -> impl Stream<Item = ()> + Send + Un
 }
 
 #[cfg(target_arch = "wasm32")]
-pub(crate) type PinBoxFut<'a, T> = Pin<Box<dyn Future<Output = Result<T, ProviderError>> + 'a>>;
+pub(crate) type PinBoxFut<'a, T> = Pin<Box<dyn Future<Output = Result<T, RpcError>> + 'a>>;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) type PinBoxFut<'a, T> = Pin<Box<dyn Future<Output = Result<T, RpcError>> + Send + 'a>>;

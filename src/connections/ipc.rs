@@ -9,7 +9,6 @@ use crate::{
 
 use ethers_core::types::U256;
 
-use async_trait::async_trait;
 use futures_channel::{
     mpsc::{self, UnboundedReceiver},
     oneshot,
@@ -60,7 +59,8 @@ impl Ipc {
     }
 }
 
-#[async_trait]
+#[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 impl RpcConnection for Ipc {
     async fn _request(&self, request: RawRequest) -> Result<RawResponse, RpcError> {
         let id = self.id.fetch_add(1, Ordering::SeqCst);

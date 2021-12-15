@@ -3,7 +3,6 @@ use std::{
     sync::atomic::{AtomicU64, Ordering},
 };
 
-use async_trait::async_trait;
 use reqwest::{Client, Url};
 
 use crate::{
@@ -29,7 +28,8 @@ impl Http {
     }
 }
 
-#[async_trait]
+#[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 impl RpcConnection for Http {
     async fn _request(&self, request: RawRequest) -> Result<RawResponse, RpcError> {
         let id = self.id.fetch_add(1, Ordering::SeqCst);

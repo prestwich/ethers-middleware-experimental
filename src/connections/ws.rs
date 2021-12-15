@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use ethers_core::types::U256;
 use futures_channel::{
     mpsc::{self, UnboundedReceiver},
@@ -150,7 +149,8 @@ impl Ws {
     }
 }
 
-#[async_trait]
+#[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 impl RpcConnection for Ws {
     async fn _request(&self, request: RawRequest) -> Result<RawResponse, RpcError> {
         let id = self.id.fetch_add(1, Ordering::SeqCst);

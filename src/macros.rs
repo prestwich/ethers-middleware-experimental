@@ -203,7 +203,9 @@ macro_rules! impl_rpc {
 macro_rules! impl_network_middleware {
     ($network:ty) => {
         paste::paste! {
-            #[async_trait::async_trait]
+
+            #[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
+            #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
             #[doc = "Middleware for the `" $network  "` network"]
             pub trait [<$network Middleware>]:
                 crate::middleware::BaseMiddleware<$network>
@@ -669,7 +671,8 @@ macro_rules! impl_network_middleware {
                 }
             }
 
-            #[async_trait::async_trait]
+            #[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
+            #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
             pub trait [<$network PubSubMiddleware>]:
                 [<$network Middleware>]
                 + crate::middleware::PubSubMiddleware<$network>

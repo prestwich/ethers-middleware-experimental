@@ -4,7 +4,6 @@ use crate::{
     types::{RawRequest, RawResponse},
 };
 
-use async_trait::async_trait;
 use serde::Serialize;
 use serde_json::Value;
 use std::{
@@ -26,8 +25,8 @@ impl Default for MockRpcConnection {
     }
 }
 
-#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
-#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 impl RpcConnection for MockRpcConnection {
     /// Pushes the `(method, input)` to the back of the `requests` queue,
     /// pops the responses from the back of the `responses` queue

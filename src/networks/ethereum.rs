@@ -125,6 +125,8 @@ impl Txn for TypedTransaction {
 
 impl_network_middleware!(Ethereum);
 
+#[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
 mod test {
     #[tokio::test]
     async fn it_makes_a_req() {

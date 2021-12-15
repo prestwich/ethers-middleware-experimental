@@ -3,7 +3,6 @@ pub mod dev_rpc;
 
 use std::fmt::Debug;
 
-use async_trait::async_trait;
 use ethers_core::{
     abi::{self, Detokenize, ParamType},
     types::{
@@ -55,7 +54,8 @@ fn decode_bytes<T: Detokenize>(param: ParamType, bytes: Bytes) -> T {
 }
 
 /// Exposes RPC methods shared by all clients
-#[async_trait]
+#[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 pub trait BaseMiddleware<N: Network>: Debug + Send + Sync {
     #[doc(hidden)]
     fn inner_base(&self) -> &dyn BaseMiddleware<N>;
@@ -333,7 +333,8 @@ pub trait BaseMiddleware<N: Network>: Debug + Send + Sync {
 }
 
 /// Exposes geth-specific RPC methods
-#[async_trait]
+#[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 pub trait GethMiddleware<N: Network>: BaseMiddleware<N> + Send + Sync {
     /// Upcast the `GethMiddleware` to a generic `Middleware`
     fn as_base_middleware(&self) -> &dyn BaseMiddleware<N>;
@@ -380,7 +381,8 @@ pub trait GethMiddleware<N: Network>: BaseMiddleware<N> + Send + Sync {
 }
 
 /// Exposes parity (openethereum)-specific RPC methods
-#[async_trait]
+#[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 pub trait ParityMiddleware<N: Network>: BaseMiddleware<N> + Send + Sync {
     /// Upcast the `ParityMiddleware` to a generic `Middleware`
     fn as_base_middleware(&self) -> &dyn BaseMiddleware<N>;
@@ -473,7 +475,8 @@ pub trait ParityMiddleware<N: Network>: BaseMiddleware<N> + Send + Sync {
     }
 }
 
-#[async_trait]
+#[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 pub trait Middleware<N: Network>:
     BaseMiddleware<N> + GethMiddleware<N> + ParityMiddleware<N> + Send + Sync
 {
@@ -727,7 +730,8 @@ pub trait Middleware<N: Network>:
     }
 }
 
-#[async_trait]
+#[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 pub trait PubSubMiddleware<N: Network>: Middleware<N> + Send + Sync {
     #[doc(hidden)]
     fn pubsub_provider(&self) -> &dyn PubSubConnection;
@@ -829,7 +833,8 @@ mod test {
     #[derive(Debug)]
     struct DummyMiddleware;
 
-    #[async_trait]
+    #[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
+    #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
     impl<N> BaseMiddleware<N> for DummyMiddleware
     where
         N: Network,
@@ -847,7 +852,8 @@ mod test {
         }
     }
 
-    #[async_trait]
+    #[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
+    #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
     impl<N> ParityMiddleware<N> for DummyMiddleware
     where
         N: Network,
@@ -861,7 +867,8 @@ mod test {
         }
     }
 
-    #[async_trait]
+    #[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
+    #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
     impl<N> GethMiddleware<N> for DummyMiddleware
     where
         N: Network,
@@ -875,7 +882,8 @@ mod test {
         }
     }
 
-    #[async_trait]
+    #[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
+    #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
     impl<N> Middleware<N> for DummyMiddleware
     where
         N: Network,

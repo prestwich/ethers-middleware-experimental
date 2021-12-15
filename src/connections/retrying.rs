@@ -1,7 +1,4 @@
 use std::{fmt::Debug, str::FromStr, time::Duration};
-
-use async_trait::async_trait;
-use tokio::time::sleep;
 use tracing::{debug, instrument, warn};
 
 use crate::{
@@ -37,7 +34,8 @@ impl<P> RetryingProvider<P> {
     }
 }
 
-#[async_trait]
+#[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 impl<P> RpcConnection for RetryingProvider<P>
 where
     P: RpcConnection + 'static,
@@ -70,7 +68,14 @@ where
                     }
                 }
             }
-            sleep(Duration::from_secs(backoff_seconds)).await;
+
+            #[cfg(target_arch = "wasm32")]
+            crate::Delay::new(Duration::from_secs(backoff_seconds))
+                .await
+                .expect("delay works");
+
+            #[cfg(not(target_arch = "wasm32"))]
+            crate::Delay::new(Duration::from_secs(backoff_seconds)).await;
         }
 
         return Err(RpcError::MaxRequests(Box::new(errors)));

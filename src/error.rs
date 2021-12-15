@@ -1,6 +1,8 @@
 use crate::types::{JsonRpcError, NodeClient, RawResponse};
 use futures_channel::oneshot;
 use thiserror::Error;
+
+#[cfg(not(target_arch = "wasm32"))]
 use tokio_tungstenite::tungstenite::{self, protocol::CloseFrame};
 
 #[derive(Error, Debug)]

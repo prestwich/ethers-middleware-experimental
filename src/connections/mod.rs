@@ -32,8 +32,6 @@ use serde::Serialize;
 use serde_json::Value;
 use std::fmt::Debug;
 
-use async_trait::async_trait;
-
 use crate::{
     error::RpcError,
     middleware::{BaseMiddleware, GethMiddleware, Middleware, ParityMiddleware, PubSubMiddleware},
@@ -66,7 +64,8 @@ async fn get_block_gen(
     }
 }
 
-#[async_trait]
+#[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 pub trait RpcConnection: Debug + Send + Sync {
     async fn _request(&self, request: RawRequest) -> Result<RawResponse, RpcError>;
 
@@ -104,7 +103,8 @@ pub trait PubSubConnection: RpcConnection + Send + Sync {
     fn install_listener(&self, id: U256) -> Result<UnboundedReceiver<Notification>, RpcError>;
 }
 
-#[async_trait]
+#[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 impl<T, N> BaseMiddleware<N> for T
 where
     T: RpcConnection,
@@ -405,7 +405,8 @@ where
     }
 }
 
-#[async_trait]
+#[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 impl<T, N> ParityMiddleware<N> for T
 where
     T: RpcConnection,
@@ -487,7 +488,8 @@ where
     }
 }
 
-#[async_trait]
+#[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 impl<T, N> GethMiddleware<N> for T
 where
     T: RpcConnection,
@@ -514,7 +516,8 @@ where
     }
 }
 
-#[async_trait]
+#[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 impl<T, N> Middleware<N> for T
 where
     T: RpcConnection,
@@ -607,7 +610,8 @@ where
     }
 }
 
-#[async_trait]
+#[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 impl<T, N> PubSubMiddleware<N> for T
 where
     T: PubSubConnection,

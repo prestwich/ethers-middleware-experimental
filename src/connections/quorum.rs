@@ -6,7 +6,6 @@ use std::{
     task::{Context, Poll},
 };
 
-use async_trait::async_trait;
 use ethers_core::types::{U256, U64};
 use futures_channel::mpsc::{self, UnboundedReceiver, UnboundedSender};
 use futures_util::{future::join_all, stream::select_all, FutureExt, StreamExt};
@@ -358,8 +357,8 @@ impl<P> WeightedProvider<P> {
     }
 }
 
-#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
-#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 impl<P> RpcConnection for QuorumProvider<P>
 where
     P: RpcConnection,
