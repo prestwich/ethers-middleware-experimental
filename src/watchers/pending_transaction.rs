@@ -22,7 +22,7 @@ use crate::{
 /// is 1, but may be adjusted with the `confirmations` method. If the transaction does not
 /// have enough confirmations or is not mined, the future will stay in the pending state.
 #[pin_project]
-pub struct PendingTransaction<'a, N> {
+pub struct GenericPendingTransaction<'a, N> {
     tx_hash: TxHash,
     confirmations: usize,
     provider: &'a dyn BaseMiddleware<N>,
@@ -30,7 +30,7 @@ pub struct PendingTransaction<'a, N> {
     interval: Box<dyn Stream<Item = ()> + Send + Unpin>,
 }
 
-impl<'a, N: Network> PendingTransaction<'a, N> {
+impl<'a, N: Network> GenericPendingTransaction<'a, N> {
     /// Creates a new pending transaction poller from a hash and a provider
     pub fn new(tx_hash: TxHash, provider: &'a dyn BaseMiddleware<N>) -> Self {
         let delay = Box::pin(Delay::new(DEFAULT_POLL_INTERVAL));
@@ -85,7 +85,7 @@ macro_rules! rewake_with_new_state_if {
     };
 }
 
-impl<'a, N: Network> Future for PendingTransaction<'a, N> {
+impl<'a, N: Network> Future for GenericPendingTransaction<'a, N> {
     type Output = Result<Option<TransactionReceipt>, RpcError>;
 
     fn poll(self: Pin<&mut Self>, ctx: &mut Context) -> Poll<Self::Output> {
@@ -227,7 +227,7 @@ impl<'a, N: Network> Future for PendingTransaction<'a, N> {
     }
 }
 
-impl<'a, N: Network> fmt::Debug for PendingTransaction<'a, N> {
+impl<'a, N: Network> fmt::Debug for GenericPendingTransaction<'a, N> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("PendingTransaction")
             .field("tx_hash", &self.tx_hash)
@@ -237,21 +237,21 @@ impl<'a, N: Network> fmt::Debug for PendingTransaction<'a, N> {
     }
 }
 
-impl<'a, N: Network> PartialEq for PendingTransaction<'a, N> {
+impl<'a, N: Network> PartialEq for GenericPendingTransaction<'a, N> {
     fn eq(&self, other: &Self) -> bool {
         self.tx_hash == other.tx_hash
     }
 }
 
-impl<'a, N: Network> PartialEq<TxHash> for PendingTransaction<'a, N> {
+impl<'a, N: Network> PartialEq<TxHash> for GenericPendingTransaction<'a, N> {
     fn eq(&self, other: &TxHash) -> bool {
         &self.tx_hash == other
     }
 }
 
-impl<'a, N: Network> Eq for PendingTransaction<'a, N> {}
+impl<'a, N: Network> Eq for GenericPendingTransaction<'a, N> {}
 
-impl<'a, N: Network> Deref for PendingTransaction<'a, N> {
+impl<'a, N: Network> Deref for GenericPendingTransaction<'a, N> {
     type Target = TxHash;
 
     fn deref(&self) -> &Self::Target {

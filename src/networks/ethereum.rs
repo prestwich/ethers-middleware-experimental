@@ -8,7 +8,7 @@ use std::fmt::Debug;
 use crate::{
     middleware::{BaseMiddleware, GethMiddleware, Middleware, ParityMiddleware},
     networks::{Network, Txn},
-    Eip1559Fees,
+    types::Eip1559Fees,
 };
 
 #[derive(Debug)]
@@ -23,7 +23,7 @@ impl Txn for TypedTransaction {
         true
     }
 
-    fn get_1559_fees(&self) -> crate::Eip1559Fees {
+    fn get_1559_fees(&self) -> crate::types::Eip1559Fees {
         match self {
             TypedTransaction::Eip1559(tx) => Eip1559Fees {
                 max_fee_per_gas: tx.max_fee_per_gas,
@@ -132,9 +132,7 @@ mod test {
     async fn it_makes_a_req() {
         use super::EthereumMiddleware;
         let provider: crate::connections::Http =
-            "https://mainnet.infura.io/v3/5cfdec76313b457cb696ff1b89cee7ee"
-                .parse()
-                .unwrap();
+            "https://mainnet.infura.io/v3/5cfdec76313b457cb696ff1b89cee7ee".parse().unwrap();
         dbg!(provider.get_block_number().await.unwrap());
     }
 }

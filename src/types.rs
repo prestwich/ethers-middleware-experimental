@@ -1,3 +1,5 @@
+//! Types for this crate, including generic JSON-RPC Request/Response types
+
 use ethers_core::types::U256;
 use futures_channel::{mpsc, oneshot};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -27,10 +29,7 @@ impl RawRequest {
     where
         S: Serialize,
     {
-        Ok(RawRequest {
-            method,
-            params: serde_json::to_value(params)?,
-        })
+        Ok(RawRequest { method, params: serde_json::to_value(params)? })
     }
 
     /// Access the request method
@@ -58,11 +57,7 @@ pub struct JsonRpcError {
 
 impl fmt::Display for JsonRpcError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "(code: {}, message: {}, data: {:?})",
-            self.code, self.message, self.data
-        )
+        write!(f, "(code: {}, message: {}, data: {:?})", self.code, self.message, self.data)
     }
 }
 
@@ -160,10 +155,7 @@ pub trait RequestParams: Serialize + Send + Sync + Debug {
     }
 
     async fn send_via(&self, connection: &dyn RpcConnection) -> Result<Self::Response, RpcError> {
-        connection
-            ._request(self.to_raw_request())
-            .await?
-            .deserialize()
+        connection._request(self.to_raw_request()).await?.deserialize()
     }
 }
 
@@ -193,10 +185,7 @@ pub(crate) type Subscription = mpsc::UnboundedSender<Notification>;
 #[derive(Debug)]
 pub(crate) enum Instruction {
     /// JSON-RPC request
-    Request {
-        request: JsonRpcRequest,
-        sender: ResponseChannel,
-    },
+    Request { request: JsonRpcRequest, sender: ResponseChannel },
     /// Create a new subscription
     Subscribe { id: U256, sink: Subscription },
     /// Cancel an existing subscription
@@ -246,6 +235,12 @@ impl FromStr for NodeClient {
     }
 }
 
+#[derive(Debug, Copy, Clone, Default)]
+pub struct Eip1559Fees {
+    pub max_fee_per_gas: Option<U256>,
+    pub max_priority_fee_per_gas: Option<U256>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -277,10 +272,7 @@ mod tests {
         let req = JsonRpcRequest {
             id: 300,
             jsonrpc: "2.0",
-            request: RawRequest {
-                method: "method_name",
-                params: serde_json::to_value(1).unwrap(),
-            },
+            request: RawRequest { method: "method_name", params: serde_json::to_value(1).unwrap() },
         };
         assert_eq!(
             &serde_json::to_string(&req).unwrap(),

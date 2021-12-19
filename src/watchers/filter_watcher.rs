@@ -17,20 +17,20 @@ use crate::{
     DEFAULT_POLL_INTERVAL,
 };
 
-enum FilterWatcherState<'a, R> {
+enum GenericFilterWatcherState<'a, R> {
     WaitForInterval,
     GetFilterChanges(PinBoxFut<'a, Vec<serde_json::Value>>),
     NextItem(IntoIter<R>),
 }
 
-pub type NewBlockWatcher<'a, N> = FilterWatcher<'a, H256, N>;
-pub type PendingTransactionWatcher<'a, N> = FilterWatcher<'a, TxHash, N>;
-pub type LogWatcher<'a, N> = FilterWatcher<'a, Log, N>;
+pub type GenericNewBlockWatcher<'a, N> = GenericFilterWatcher<'a, H256, N>;
+pub type GenericPendingTransactionWatcher<'a, N> = GenericFilterWatcher<'a, TxHash, N>;
+pub type GenericLogWatcher<'a, N> = GenericFilterWatcher<'a, Log, N>;
 
 #[must_use = "filters do nothing unless you stream them"]
 #[pin_project]
 /// Streams data from an installed filter via `eth_getFilterChanges`
-pub struct FilterWatcher<'a, R, N> {
+pub struct GenericFilterWatcher<'a, R, N> {
     /// The filter's installed id on the ethereum node
     pub id: U256,
 
@@ -39,10 +39,10 @@ pub struct FilterWatcher<'a, R, N> {
     // The polling interval
     interval: Box<dyn Stream<Item = ()> + Send + Unpin>,
 
-    state: FilterWatcherState<'a, R>,
+    state: GenericFilterWatcherState<'a, R>,
 }
 
-impl<'a, R, N> FilterWatcher<'a, R, N>
+impl<'a, R, N> GenericFilterWatcher<'a, R, N>
 where
     R: Send + Sync + DeserializeOwned,
 {
@@ -51,7 +51,7 @@ where
         Self {
             id: id.into(),
             interval: Box::new(interval(DEFAULT_POLL_INTERVAL)),
-            state: FilterWatcherState::WaitForInterval,
+            state: GenericFilterWatcherState::WaitForInterval,
             provider,
         }
     }
@@ -71,7 +71,7 @@ where
 
 // Pattern for flattening the returned Vec of filter changes taken from
 // https://github.com/tomusdrw/rust-web3/blob/f043b222744580bf4be043da757ab0b300c3b2da/src/api/eth_filter.rs#L50-L67
-impl<'a, R, N> Stream for FilterWatcher<'a, R, N>
+impl<'a, R, N> Stream for GenericFilterWatcher<'a, R, N>
 where
     R: Serialize + Send + Sync + DeserializeOwned + Debug + 'a,
     N: Network,
@@ -83,16 +83,16 @@ where
         let id = *this.id;
 
         *this.state = match this.state {
-            FilterWatcherState::WaitForInterval => {
+            GenericFilterWatcherState::WaitForInterval => {
                 // Wait the polling period
                 let _ready = futures_util::ready!(this.interval.poll_next_unpin(cx));
 
                 // create a new instance of the future
                 cx.waker().wake_by_ref();
                 let fut = Box::pin(this.provider.get_filter_changes(id));
-                FilterWatcherState::GetFilterChanges(fut)
+                GenericFilterWatcherState::GetFilterChanges(fut)
             }
-            FilterWatcherState::GetFilterChanges(fut) => {
+            GenericFilterWatcherState::GetFilterChanges(fut) => {
                 // NOTE: If the provider returns an error, this will return an empty
                 // vector. Should we make this return a Result instead? Ideally if we're
                 // in a streamed loop we wouldn't want the loop to terminate if an error
@@ -104,17 +104,17 @@ where
                     .collect::<Result<_, _>>()
                     .unwrap_or_default();
                 cx.waker().wake_by_ref();
-                FilterWatcherState::NextItem(items.into_iter())
+                GenericFilterWatcherState::NextItem(items.into_iter())
             }
             // Consume 1 element from the vector. If more elements are in the vector,
             // the next call will immediately go to this branch instead of trying to get
             // filter changes again. Once the whole vector is consumed, it will poll again
             // for new logs
-            FilterWatcherState::NextItem(iter) => {
+            GenericFilterWatcherState::NextItem(iter) => {
                 cx.waker().wake_by_ref();
                 match iter.next() {
                     Some(item) => return Poll::Ready(Some(item)),
-                    None => FilterWatcherState::WaitForInterval,
+                    None => GenericFilterWatcherState::WaitForInterval,
                 }
             }
         };
@@ -123,7 +123,7 @@ where
     }
 }
 
-impl<'a, N> PendingTransactionWatcher<'a, N>
+impl<'a, N> GenericPendingTransactionWatcher<'a, N>
 where
     N: Network,
 {
@@ -133,12 +133,12 @@ where
     /// This internally calls `Provider::get_transaction` with every new transaction.
     /// No more than n futures will be buffered at any point in time, and less than n may also be
     /// buffered depending on the state of each future.
-    pub fn transactions_unordered(self, n: usize) -> TransactionStream<'a, Self, N> {
-        TransactionStream::new(self.provider, self, n)
+    pub fn transactions_unordered(self, n: usize) -> GenericTransactionStream<'a, Self, N> {
+        GenericTransactionStream::new(self.provider, self, n)
     }
 }
 
-/// Errors `TransactionStream` can throw
+/// Errors `GenericTransactionStream` can throw
 #[derive(Debug, thiserror::Error)]
 pub enum GetTransactionError {
     #[error("Failed to get transaction `{0}`: {1}")]
@@ -163,7 +163,7 @@ type TransactionResult = Result<Transaction, GetTransactionError>;
 
 /// Drains a stream of transaction hashes and yields entire `Transaction`.
 #[must_use = "streams do nothing unless polled"]
-pub struct TransactionStream<'a, St, N>
+pub struct GenericTransactionStream<'a, St, N>
 where
     N: Network,
 {
@@ -179,11 +179,11 @@ where
     max_concurrent: usize,
 }
 
-impl<'a, St, N> TransactionStream<'a, St, N>
+impl<'a, St, N> GenericTransactionStream<'a, St, N>
 where
     N: Network,
 {
-    /// Create a new `TransactionStream` instance
+    /// Create a new `GenericTransactionStream` instance
     pub fn new(provider: &'a dyn BaseMiddleware<N>, stream: St, max_concurrent: usize) -> Self {
         Self {
             pending: Default::default(),
@@ -208,7 +208,7 @@ where
     }
 }
 
-impl<'a, St, N> Stream for TransactionStream<'a, St, N>
+impl<'a, St, N> Stream for GenericTransactionStream<'a, St, N>
 where
     St: Stream<Item = TxHash> + Unpin + 'a,
     N: Network,

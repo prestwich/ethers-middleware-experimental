@@ -1,3 +1,5 @@
+//! Common macros
+
 // used with WS and Quorum
 macro_rules! if_wasm {
     ($($item:item)*) => {$(
@@ -592,7 +594,7 @@ macro_rules! impl_network_middleware {
                     &self,
                     tx: &<$network as crate::networks::Network>::TransactionRequest,
                     block: Option<ethers_core::types::BlockNumber>,
-                ) -> Result<crate::watchers::pending_transaction::PendingTransaction<'_, $network>, crate::error::RpcError> {
+                ) -> Result<crate::watchers::pending_transaction::GenericPendingTransaction<'_, $network>, crate::error::RpcError> {
                     crate::middleware::Middleware::send_transaction([<$network Middleware>]::as_middleware(self), tx, block).await
                 }
 
@@ -608,26 +610,26 @@ macro_rules! impl_network_middleware {
                     tx: &<$network as crate::networks::Network>::TransactionRequest,
                     escalations: usize,
                     policy: crate::EscalationPolicy,
-                ) -> Result<crate::watchers::pending_escalator::EscalatingPending<'_, $network>, crate::error::RpcError> {
+                ) -> Result<crate::watchers::pending_escalator::GenericEscalatingPending<'_, $network>, crate::error::RpcError> {
                     [<$network Middleware>]::as_middleware(self).send_escalating(tx, escalations, policy).await
                 }
 
                 /// Send the raw RLP encoded transaction to the entire Ethereum network and
                 /// returns the transaction's hash This will consume gas from the account
                 /// that signed the transaction.
-                async fn send_raw_transaction(&self, tx: ethers_core::types::Bytes) -> Result<crate::watchers::pending_transaction::PendingTransaction<'_, $network>, crate::error::RpcError> {
+                async fn send_raw_transaction(&self, tx: ethers_core::types::Bytes) -> Result<crate::watchers::pending_transaction::GenericPendingTransaction<'_, $network>, crate::error::RpcError> {
 
                     crate::middleware::Middleware::send_raw_transaction([<$network Middleware>]::as_middleware(self), tx).await
                 }
 
                 /// Create a stream that repeatedly polls a log filter
-                async fn watch_new_logs(&self, filter: &ethers_core::types::Filter) -> Result<crate::watchers::filter_watcher::LogWatcher<$network>, crate::error::RpcError> {
+                async fn watch_new_logs(&self, filter: &ethers_core::types::Filter) -> Result<crate::watchers::filter_watcher::GenericLogWatcher<$network>, crate::error::RpcError> {
                     [<$network Middleware>]::as_middleware(self).watch_new_logs(filter).await
 
                 }
 
                 /// Create a stream that repeatedly polls a new block filter
-                async fn watch_new_blocks(&self) -> Result<crate::watchers::filter_watcher::NewBlockWatcher<$network>, crate::error::RpcError> {
+                async fn watch_new_blocks(&self) -> Result<crate::watchers::filter_watcher::GenericNewBlockWatcher<$network>, crate::error::RpcError> {
                     [<$network Middleware>]::as_middleware(self).watch_new_blocks().await
 
                 }
@@ -635,7 +637,7 @@ macro_rules! impl_network_middleware {
                 /// Create a stream that repeatedly polls a pending transaction filter
                 async fn watch_new_pending_transactions(
                     &self,
-                ) -> Result<crate::watchers::filter_watcher::PendingTransactionWatcher<$network>, crate::error::RpcError> {
+                ) -> Result<crate::watchers::filter_watcher::GenericPendingTransactionWatcher<$network>, crate::error::RpcError> {
                     [<$network Middleware>]::as_middleware(self).watch_new_pending_transactions().await
 
                 }
@@ -701,21 +703,21 @@ macro_rules! impl_network_middleware {
                     [<$network PubSubMiddleware>]::as_pubsub_middleware(self).subscribe_syncing().await
                 }
 
-                async fn stream_new_heads(&self) -> Result<crate::subscriptions::NewBlockStream<$network>, crate::error::RpcError> {
+                async fn stream_new_heads(&self) -> Result<crate::subscriptions::GenericNewBlockStream<$network>, crate::error::RpcError> {
                     [<$network PubSubMiddleware>]::as_pubsub_middleware(self).stream_new_heads().await
                 }
 
-                async fn stream_logs(&self, filter: &ethers_core::types::Filter) -> Result<crate::subscriptions::LogStream<$network>, crate::error::RpcError> {
+                async fn stream_logs(&self, filter: &ethers_core::types::Filter) -> Result<crate::subscriptions::GenericLogStream<$network>, crate::error::RpcError> {
                     [<$network PubSubMiddleware>]::as_pubsub_middleware(self).stream_logs(filter).await
                 }
 
                 async fn stream_new_pending_transactions(
                     &self,
-                ) -> Result<crate::subscriptions::PendingTransactionStream<$network>, crate::error::RpcError> {
+                ) -> Result<crate::subscriptions::GenericPendingTransactionStream<$network>, crate::error::RpcError> {
                     [<$network PubSubMiddleware>]::as_pubsub_middleware(self).stream_new_pending_transactions().await
                 }
 
-                async fn stream_syncing(&self) -> Result<crate::subscriptions::SyncingStream<$network>, crate::error::RpcError> {
+                async fn stream_syncing(&self) -> Result<crate::subscriptions::GenericSyncingStream<$network>, crate::error::RpcError> {
                     [<$network PubSubMiddleware>]::as_pubsub_middleware(self).stream_syncing().await
                 }
 
@@ -732,6 +734,40 @@ macro_rules! impl_network_middleware {
                     self
                 }
             }
+
+            mod [<$network:snake _defaults>] {
+                use crate::{
+                    subscriptions::GenericSubscriptionStream,
+                    types::SyncData,
+                    watchers::{GenericEscalatingPending, GenericFilterWatcher, GenericPendingTransaction},
+                };
+                use ethers_core::types::{Block, Log, TxHash, H256};
+
+                // re-export under unqualified name
+                use super::$network;
+                pub type DefaultNetwork = $network;
+                pub use super::[<$network Middleware>] as Middleware;
+                pub use super::[<$network PubSubMiddleware>] as PubSubMiddleware;
+
+                // network-specific watchers
+                pub type FilterWatcher<'a, T> = GenericFilterWatcher<'a, T, $network>;
+                pub type NewBlockWatcher<'a> = FilterWatcher<'a, H256>;
+                pub type PendingTransactionWatcher<'a> = FilterWatcher<'a, TxHash>;
+                pub type LogWatcher<'a> = FilterWatcher<'a, Log>;
+
+                // network-specific streams
+                pub type SubscriptionStream<'a, T> = GenericSubscriptionStream<'a, T, $network>;
+                pub type GenericNewBlockStream<'a> = SubscriptionStream<'a, Block<TxHash>>;
+                pub type GenericLogStream<'a> = SubscriptionStream<'a, Log>;
+                pub type GenericPendingTransactionStream<'a> = SubscriptionStream<'a, TxHash>;
+                pub type GenericSyncingStream<'a> = SubscriptionStream<'a, SyncData>;
+
+                // network-specific transactions
+                pub type PendingTransaction<'a> = GenericPendingTransaction<'a, $network>;
+                pub type EscalatingPending<'a> = GenericEscalatingPending<'a, $network>;
+            }
+
+            pub use [<$network:snake _defaults>]::*;
         }
     };
 }

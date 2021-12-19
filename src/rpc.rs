@@ -1,3 +1,5 @@
+//! Declaration of Ethereum JSON-RPC parameter and response types
+
 use ethers_core::types::{
     transaction::{eip2718::TypedTransaction, eip2930::AccessListWithGasUsed},
     *,

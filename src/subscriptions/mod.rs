@@ -1,3 +1,5 @@
+//! PubSubMiddleware-based subscriptions
+
 use std::{
     marker::PhantomData,
     pin::Pin,
@@ -12,20 +14,20 @@ use serde::de::DeserializeOwned;
 
 use crate::{
     error::RpcError,
-    filter_watcher::TransactionStream,
+    watchers::filter_watcher::GenericTransactionStream,
     middleware::{Middleware, PubSubMiddleware},
     networks::Network,
     types::{Notification, SyncData},
 };
 
-pub type NewBlockStream<'a, N> = SubscriptionStream<'a, Block<TxHash>, N>;
-pub type LogStream<'a, N> = SubscriptionStream<'a, Log, N>;
-pub type PendingTransactionStream<'a, N> = SubscriptionStream<'a, TxHash, N>;
-pub type SyncingStream<'a, N> = SubscriptionStream<'a, SyncData, N>;
+pub type GenericNewBlockStream<'a, N> = GenericSubscriptionStream<'a, Block<TxHash>, N>;
+pub type GenericLogStream<'a, N> = GenericSubscriptionStream<'a, Log, N>;
+pub type GenericPendingTransactionStream<'a, N> = GenericSubscriptionStream<'a, TxHash, N>;
+pub type GenericSyncingStream<'a, N> = GenericSubscriptionStream<'a, SyncData, N>;
 
 #[must_use = "subscriptions do nothing unless you stream them"]
 #[pin_project(PinnedDrop)]
-pub struct SubscriptionStream<'a, R, N>
+pub struct GenericSubscriptionStream<'a, R, N>
 where
     R: DeserializeOwned,
     N: Network,
@@ -38,7 +40,7 @@ where
     ret: PhantomData<R>,
 }
 
-impl<'a, R, N> SubscriptionStream<'a, R, N>
+impl<'a, R, N> GenericSubscriptionStream<'a, R, N>
 where
     R: DeserializeOwned,
     N: Network,
@@ -70,7 +72,7 @@ where
 // Each subscription item is a serde_json::Value which must be decoded to the
 // subscription's return type.
 // TODO: Can this be replaced with an `rx.map` in the constructor?
-impl<'a, R, N> Stream for SubscriptionStream<'a, R, N>
+impl<'a, R, N> Stream for GenericSubscriptionStream<'a, R, N>
 where
     R: DeserializeOwned,
     N: Network,
@@ -90,7 +92,7 @@ where
 }
 
 #[pinned_drop]
-impl<R, N> PinnedDrop for SubscriptionStream<'_, R, N>
+impl<R, N> PinnedDrop for GenericSubscriptionStream<'_, R, N>
 where
     R: DeserializeOwned,
     N: Network,
@@ -103,7 +105,7 @@ where
     }
 }
 
-impl<'a, N> SubscriptionStream<'a, TxHash, N>
+impl<'a, N> GenericSubscriptionStream<'a, TxHash, N>
 where
     N: Network,
 {
@@ -113,10 +115,10 @@ where
     /// This internally calls `Provider::get_transaction` with every new transaction.
     /// No more than n futures will be buffered at any point in time, and less than n may also be
     /// buffered depending on the state of each future.
-    pub fn transactions_unordered(self, n: usize) -> TransactionStream<'a, Self, N> {
+    pub fn transactions_unordered(self, n: usize) -> GenericTransactionStream<'a, Self, N> {
         let provider = self.provider.as_middleware();
         let provider = Middleware::as_base_middleware(provider);
-        TransactionStream::new(provider, self, n)
+        GenericTransactionStream::new(provider, self, n)
     }
 }
 
@@ -222,7 +224,7 @@ mod tests {
         }))
         .await;
 
-        let stream = TransactionStream::<_, Ethereum>::new(
+        let stream = GenericTransactionStream::<_, Ethereum>::new(
             &provider,
             stream::iter(txs.iter().cloned().map(|tx| tx.unwrap().transaction_hash)),
             10,

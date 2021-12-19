@@ -1,3 +1,5 @@
+//! A common error type for all middleware
+
 use crate::types::{JsonRpcError, NodeClient, RawResponse};
 use futures_channel::oneshot;
 use thiserror::Error;

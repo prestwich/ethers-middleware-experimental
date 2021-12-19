@@ -5,7 +5,7 @@ use ethers_core::{
     utils::keccak256,
 };
 
-use crate::{Network, Txn};
+use crate::networks::{Network, Txn};
 
 /// ENS registry address (`0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e`)
 /// Same on Rinkeby, Goerli, and Ropsten
@@ -70,14 +70,12 @@ pub fn reverse_address(addr: Address) -> String {
 /// Returns the ENS namehash as specified in [EIP-137](https://eips.ethereum.org/EIPS/eip-137)
 pub fn namehash(name: &str) -> H256 {
     if name.is_empty() {
-        return H256::zero();
+        return H256::zero()
     }
 
     // iterate in reverse
     name.rsplit('.')
-        .fold([0u8; 32], |node, label| {
-            keccak256(&[node, keccak256(label.as_bytes())].concat())
-        })
+        .fold([0u8; 32], |node, label| keccak256(&[node, keccak256(label.as_bytes())].concat()))
         .into()
 }
 
@@ -86,11 +84,7 @@ mod tests {
     use super::*;
 
     fn assert_hex(hash: H256, val: &str) {
-        let v = if let Some(stripped) = val.strip_prefix("0x") {
-            stripped
-        } else {
-            val
-        };
+        let v = if let Some(stripped) = val.strip_prefix("0x") { stripped } else { val };
 
         assert_eq!(hash.0.to_vec(), hex::decode(v).unwrap());
     }
@@ -98,22 +92,10 @@ mod tests {
     #[test]
     fn test_namehash() {
         for (name, expected) in &[
-            (
-                "",
-                "0000000000000000000000000000000000000000000000000000000000000000",
-            ),
-            (
-                "foo.eth",
-                "de9b09fd7c5f901e23a3f19fecc54828e9c848539801e86591bd9801b019f84f",
-            ),
-            (
-                "eth",
-                "0x93cdeb708b7545dc668eb9280176169d1c33cfd8ed6f04690a0bcc88a93fc4ae",
-            ),
-            (
-                "alice.eth",
-                "0x787192fc5378cc32aa956ddfdedbf26b24e8d78e40109add0eea2c1a012c3dec",
-            ),
+            ("", "0000000000000000000000000000000000000000000000000000000000000000"),
+            ("foo.eth", "de9b09fd7c5f901e23a3f19fecc54828e9c848539801e86591bd9801b019f84f"),
+            ("eth", "0x93cdeb708b7545dc668eb9280176169d1c33cfd8ed6f04690a0bcc88a93fc4ae"),
+            ("alice.eth", "0x787192fc5378cc32aa956ddfdedbf26b24e8d78e40109add0eea2c1a012c3dec"),
         ] {
             assert_hex(namehash(name), expected);
         }

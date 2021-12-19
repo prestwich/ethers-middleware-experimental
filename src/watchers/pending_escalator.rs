@@ -10,7 +10,7 @@ use std::{
 
 use crate::{error::RpcError, middleware::BaseMiddleware, networks::Network, Delay, PinBoxFut};
 
-/// States for the EscalatingPending future
+/// States for the GenericEscalatingPending future
 enum EscalatorStates<'a> {
     Initial(PinBoxFut<'a, H256>),
     Sleeping(Pin<Box<Delay>>),
@@ -19,12 +19,13 @@ enum EscalatorStates<'a> {
     Completed,
 }
 
-/// An EscalatingPending is a pending transaction that increases its own gas
-/// price over time, by broadcasting successive versions with higher gas prices.
+/// A GenericEscalatingPending is a pending transaction that increases its own
+/// gas price over time, by broadcasting successive versions with higher gas
+/// prices.
 #[must_use]
 #[pin_project(project = PendingProj)]
 #[derive(Debug)]
-pub struct EscalatingPending<'a, N>
+pub struct GenericEscalatingPending<'a, N>
 where
     N: Network,
 {
@@ -37,11 +38,11 @@ where
     state: EscalatorStates<'a>,
 }
 
-impl<'a, N> EscalatingPending<'a, N>
+impl<'a, N> GenericEscalatingPending<'a, N>
 where
     N: Network,
 {
-    /// Instantiate a new EscalatingPending. This should only be called by the
+    /// Instantiate a new GenericEscalatingPending. This should only be called by the
     /// BaseMiddleware trait.
     ///
     /// Callers MUST ensure that transactions are in _reverse_ broadcast order
@@ -153,7 +154,7 @@ macro_rules! poll_broadcast_fut {
     };
 }
 
-impl<'a, N> Future for EscalatingPending<'a, N>
+impl<'a, N> Future for GenericEscalatingPending<'a, N>
 where
     N: Network,
 {

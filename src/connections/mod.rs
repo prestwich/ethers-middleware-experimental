@@ -1,3 +1,5 @@
+//! RPC Connections which can be used as the core of a middleware stack
+
 mod http;
 pub use http::Http;
 
@@ -37,11 +39,10 @@ use crate::{
     middleware::{
         maybe, BaseMiddleware, GethMiddleware, Middleware, ParityMiddleware, PubSubMiddleware,
     },
-    networks::Network,
+    networks::{Network, Txn},
     rpc,
-    subscriptions::{LogStream, NewBlockStream, PendingTransactionStream, SyncingStream},
-    types::{NodeClient, Notification, RawRequest, RawResponse, RequestParams},
-    Eip1559Fees, Txn,
+    subscriptions::{GenericLogStream, GenericNewBlockStream, GenericPendingTransactionStream, GenericSyncingStream},
+    types::{Eip1559Fees, NodeClient, Notification, RawRequest, RawResponse, RequestParams},
 };
 
 async fn get_block_gen(
@@ -122,10 +123,7 @@ where
     }
 
     async fn node_client(&self) -> Result<NodeClient, RpcError> {
-        Ok(BaseMiddleware::<N>::client_version(self)
-            .await?
-            .parse()
-            .expect("infallible parse"))
+        Ok(BaseMiddleware::<N>::client_version(self).await?.parse().expect("infallible parse"))
     }
 
     async fn client_version(&self) -> Result<String, RpcError> {
@@ -215,10 +213,7 @@ where
         &self,
         block: BlockNumber,
     ) -> Result<Vec<TransactionReceipt>, RpcError> {
-        if BaseMiddleware::<N>::node_client(self)
-            .await?
-            .parity_block_receipts()
-        {
+        if BaseMiddleware::<N>::node_client(self).await?.parity_block_receipts() {
             rpc::dispatch_parity_get_block_receipts(self, &block.into()).await
         } else {
             rpc::dispatch_get_block_receipts(self, &block.into()).await
@@ -562,11 +557,7 @@ where
         }
 
         // estimate the gas without the access list
-        let gas = maybe(
-            tx.gas().cloned(),
-            BaseMiddleware::<N>::estimate_gas(self, tx),
-        )
-        .await?;
+        let gas = maybe(tx.gas().cloned(), BaseMiddleware::<N>::estimate_gas(self, tx)).await?;
         let mut al_used = false;
 
         // set the access lists
@@ -729,26 +720,26 @@ where
         rpc::dispatch_subscribe_syncing(self, &"syncing".to_owned().into()).await
     }
 
-    async fn stream_new_heads(&self) -> Result<NewBlockStream<N>, RpcError> {
+    async fn stream_new_heads(&self) -> Result<GenericNewBlockStream<N>, RpcError> {
         let id = PubSubMiddleware::<N>::subscribe_new_heads(self).await?;
-        NewBlockStream::new(id, self)
+        GenericNewBlockStream::new(id, self)
     }
 
-    async fn stream_logs(&self, filter: &Filter) -> Result<LogStream<N>, RpcError> {
+    async fn stream_logs(&self, filter: &Filter) -> Result<GenericLogStream<N>, RpcError> {
         let id = PubSubMiddleware::<N>::subscribe_logs(self, filter).await?;
-        LogStream::new(id, self)
+        GenericLogStream::new(id, self)
     }
 
     async fn stream_new_pending_transactions(
         &self,
-    ) -> Result<PendingTransactionStream<N>, RpcError> {
+    ) -> Result<GenericPendingTransactionStream<N>, RpcError> {
         let id = PubSubMiddleware::<N>::subscribe_new_pending_transactions(self).await?;
-        PendingTransactionStream::new(id, self)
+        GenericPendingTransactionStream::new(id, self)
     }
 
-    async fn stream_syncing(&self) -> Result<SyncingStream<N>, RpcError> {
+    async fn stream_syncing(&self) -> Result<GenericSyncingStream<N>, RpcError> {
         let id = PubSubMiddleware::<N>::subscribe_syncing(self).await?;
-        SyncingStream::new(id, self)
+        GenericSyncingStream::new(id, self)
     }
 
     async fn unsubscribe(&self, subscription_id: U256) -> Result<bool, RpcError> {

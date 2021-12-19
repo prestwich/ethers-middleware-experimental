@@ -1,3 +1,5 @@
+//! The generic middleware traits.
+
 #[cfg(feature = "dev-rpc")]
 pub mod dev_rpc;
 
@@ -20,11 +22,13 @@ use crate::{
     connections::{PubSubConnection, RpcConnection},
     ens,
     error::RpcError,
-    filter_watcher::{LogWatcher, NewBlockWatcher, PendingTransactionWatcher},
+    watchers::{
+        pending_escalator::GenericEscalatingPending,
+        pending_transaction::GenericPendingTransaction,
+        filter_watcher::{GenericLogWatcher, GenericNewBlockWatcher, GenericPendingTransactionWatcher}
+    },
     networks::{Network, Txn},
-    pending_escalator::EscalatingPending,
-    pending_transaction::PendingTransaction,
-    subscriptions::{LogStream, NewBlockStream, PendingTransactionStream, SyncingStream},
+    subscriptions::{GenericLogStream, GenericNewBlockStream, GenericPendingTransactionStream, GenericSyncingStream},
     types::NodeClient,
     EscalationPolicy,
 };
@@ -579,11 +583,11 @@ pub trait Middleware<N: Network>:
         &self,
         tx: &N::TransactionRequest,
         block: Option<BlockNumber>,
-    ) -> Result<PendingTransaction<'_, N>, RpcError> {
+    ) -> Result<GenericPendingTransaction<'_, N>, RpcError> {
         let this = Middleware::as_base_middleware(self);
 
         let hash = this.send_transaction(tx, block).await?;
-        Ok(PendingTransaction::new(hash, this))
+        Ok(GenericPendingTransaction::new(hash, this))
     }
 
     /// Send a transaction with a simple escalation policy.
@@ -598,7 +602,7 @@ pub trait Middleware<N: Network>:
         tx: &N::TransactionRequest,
         escalations: usize,
         policy: EscalationPolicy,
-    ) -> Result<EscalatingPending<'_, N>, RpcError> {
+    ) -> Result<GenericEscalatingPending<'_, N>, RpcError> {
         let this = Middleware::as_base_middleware(self);
         let mut original = tx.clone();
 
@@ -636,36 +640,36 @@ pub trait Middleware<N: Network>:
             .collect::<Result<Vec<_>, _>>()?;
         signed.reverse();
 
-        Ok(EscalatingPending::new(this, signed))
+        Ok(GenericEscalatingPending::new(this, signed))
     }
 
     /// Send the raw RLP encoded transaction to the entire Ethereum network and
     /// returns the transaction's hash This will consume gas from the account
     /// that signed the transaction.
-    async fn send_raw_transaction(&self, tx: Bytes) -> Result<PendingTransaction<'_, N>, RpcError> {
+    async fn send_raw_transaction(&self, tx: Bytes) -> Result<GenericPendingTransaction<'_, N>, RpcError> {
         let this = Middleware::as_base_middleware(self);
         let hash = this.send_raw_transaction(tx).await?;
-        Ok(PendingTransaction::new(hash, this))
+        Ok(GenericPendingTransaction::new(hash, this))
     }
 
     /// Create a stream that repeatedly polls a log filter
-    async fn watch_new_logs(&self, filter: &Filter) -> Result<LogWatcher<N>, RpcError> {
+    async fn watch_new_logs(&self, filter: &Filter) -> Result<GenericLogWatcher<N>, RpcError> {
         let this = Middleware::as_base_middleware(self);
-        Ok(LogWatcher::new(this.new_log_filter(filter).await?, this))
+        Ok(GenericLogWatcher::new(this.new_log_filter(filter).await?, this))
     }
 
     /// Create a stream that repeatedly polls a new block filter
-    async fn watch_new_blocks(&self) -> Result<NewBlockWatcher<N>, RpcError> {
+    async fn watch_new_blocks(&self) -> Result<GenericNewBlockWatcher<N>, RpcError> {
         let this = Middleware::as_base_middleware(self);
-        Ok(NewBlockWatcher::new(this.new_block_filter().await?, this))
+        Ok(GenericNewBlockWatcher::new(this.new_block_filter().await?, this))
     }
 
     /// Create a stream that repeatedly polls a pending transaction filter
     async fn watch_new_pending_transactions(
         &self,
-    ) -> Result<PendingTransactionWatcher<N>, RpcError> {
+    ) -> Result<GenericPendingTransactionWatcher<N>, RpcError> {
         let this = Middleware::as_base_middleware(self);
-        Ok(PendingTransactionWatcher::new(
+        Ok(GenericPendingTransactionWatcher::new(
             this.new_pending_transaction_filter().await?,
             this,
         ))
@@ -702,21 +706,21 @@ pub trait PubSubMiddleware<N: Network>: Middleware<N> + Send + Sync {
         self.inner_pubsub().subscribe_syncing().await
     }
 
-    async fn stream_new_heads(&self) -> Result<NewBlockStream<N>, RpcError> {
+    async fn stream_new_heads(&self) -> Result<GenericNewBlockStream<N>, RpcError> {
         self.inner_pubsub().stream_new_heads().await
     }
 
-    async fn stream_logs(&self, filter: &Filter) -> Result<LogStream<N>, RpcError> {
+    async fn stream_logs(&self, filter: &Filter) -> Result<GenericLogStream<N>, RpcError> {
         self.inner_pubsub().stream_logs(filter).await
     }
 
     async fn stream_new_pending_transactions(
         &self,
-    ) -> Result<PendingTransactionStream<N>, RpcError> {
+    ) -> Result<GenericPendingTransactionStream<N>, RpcError> {
         self.inner_pubsub().stream_new_pending_transactions().await
     }
 
-    async fn stream_syncing(&self) -> Result<SyncingStream<N>, RpcError> {
+    async fn stream_syncing(&self) -> Result<GenericSyncingStream<N>, RpcError> {
         self.inner_pubsub().stream_syncing().await
     }
 

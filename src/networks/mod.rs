@@ -1,3 +1,5 @@
+//! An abstract `Network` trait used to parameterize chain-specific behavior
+
 pub mod ethereum;
 pub use ethereum::{Ethereum, EthereumMiddleware, EthereumPubSubMiddleware};
 
@@ -5,13 +7,9 @@ use ethers_core::types::{
     transaction::eip2930::AccessList, Address, Bytes, NameOrAddress, Signature, H256, U256, U64,
 };
 
-use std::fmt::Debug;
+use crate::types::Eip1559Fees;
 
-#[derive(Debug, Copy, Clone, Default)]
-pub struct Eip1559Fees {
-    pub max_fee_per_gas: Option<U256>,
-    pub max_priority_fee_per_gas: Option<U256>,
-}
+use std::fmt::Debug;
 
 pub trait Txn: Default + serde::Serialize + Debug + Clone + Send + Sync {
     fn recommend_1559(&self) -> bool {
