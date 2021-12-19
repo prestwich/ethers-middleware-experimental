@@ -6,7 +6,6 @@ use ethers_core::types::{
 use std::fmt::Debug;
 
 use crate::{
-    middleware::{BaseMiddleware, GethMiddleware, Middleware, ParityMiddleware},
     networks::{Network, Txn},
     types::Eip1559Fees,
 };

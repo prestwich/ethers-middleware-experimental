@@ -312,7 +312,7 @@ pub trait BaseMiddleware<N: Network>: Debug + Send + Sync {
     }
 
     /// Returns the EIP-1186 proof response
-    /// https://github.com/ethereum/EIPs/issues/1186
+    /// <https://github.com/ethereum/EIPs/issues/1186>
     async fn get_proof(
         &self,
         from: Address,

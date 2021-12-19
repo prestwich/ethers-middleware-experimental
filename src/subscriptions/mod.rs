@@ -51,7 +51,8 @@ where
     /// Most providers treat `SubscriptionStream` IDs as global singletons.
     /// Instantiating this directly with a known ID will likely cause any
     /// existing streams with that ID to end. To avoid this, start a new stream
-    /// using [`Provider::subscribe`] instead of `SubscriptionStream::new`.
+    /// using the [`PubSubMiddleware`] subscribe functions instead of
+    /// `SubscriptionStream::new`.
     pub fn new(id: U256, provider: &'a dyn PubSubMiddleware<N>) -> Result<Self, RpcError> {
         // Call the underlying PubsubClient's subscribe
         let rx = provider.pubsub_provider().install_listener(id)?;

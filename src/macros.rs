@@ -219,13 +219,13 @@ macro_rules! impl_network_middleware {
                 + Sync
             {
                 #[doc(hidden)]
-                fn as_base_middleware(&self) -> &dyn BaseMiddleware<$network>;
+                fn as_base_middleware(&self) -> &dyn crate::middleware::BaseMiddleware<$network>;
                 #[doc(hidden)]
-                fn as_geth_middleware(&self) -> &dyn GethMiddleware<$network>;
+                fn as_geth_middleware(&self) -> &dyn crate::middleware::GethMiddleware<$network>;
                 #[doc(hidden)]
-                fn as_parity_middleware(&self) -> &dyn ParityMiddleware<$network>;
+                fn as_parity_middleware(&self) -> &dyn crate::middleware::ParityMiddleware<$network>;
                 #[doc(hidden)]
-                fn as_middleware(&self) -> &dyn Middleware<$network>;
+                fn as_middleware(&self) -> &dyn crate::middleware::Middleware<$network>;
 
 
                 /// Return a default tx sender address for this provider
@@ -454,7 +454,7 @@ macro_rules! impl_network_middleware {
                 }
 
                 /// Returns the EIP-1186 proof response
-                /// https://github.com/ethereum/EIPs/issues/1186
+                /// <https://github.com/ethereum/EIPs/issues/1186>
                 async fn get_proof(
                     &self,
                     from: ethers_core::types::Address,
@@ -653,22 +653,22 @@ macro_rules! impl_network_middleware {
                 + Sync
             {
                 #[doc(hidden)]
-                fn as_base_middleware(&self) -> &dyn BaseMiddleware<$network> {
+                fn as_base_middleware(&self) -> &dyn crate::middleware::BaseMiddleware<$network> {
                     self
                 }
 
                 #[doc(hidden)]
-                fn as_geth_middleware(&self) -> &dyn GethMiddleware<$network> {
+                fn as_geth_middleware(&self) -> &dyn crate::middleware::GethMiddleware<$network> {
                     self
                 }
 
                 #[doc(hidden)]
-                fn as_parity_middleware(&self) -> &dyn ParityMiddleware<$network> {
+                fn as_parity_middleware(&self) -> &dyn crate::middleware::ParityMiddleware<$network> {
                     self
                 }
 
                 #[doc(hidden)]
-                fn as_middleware(&self) -> &dyn Middleware<$network> {
+                fn as_middleware(&self) -> &dyn crate::middleware::Middleware<$network> {
                     self
                 }
             }
@@ -745,25 +745,38 @@ macro_rules! impl_network_middleware {
 
                 // re-export under unqualified name
                 use super::$network;
+
+                #[doc = "The " $network " network"]
                 pub type DefaultNetwork = $network;
                 pub use super::[<$network Middleware>] as Middleware;
                 pub use super::[<$network PubSubMiddleware>] as PubSubMiddleware;
 
                 // network-specific watchers
-                pub type FilterWatcher<'a, T> = GenericFilterWatcher<'a, T, $network>;
+                /// A polling-based filter stream
+                type FilterWatcher<'a, T> = GenericFilterWatcher<'a, T, $network>;
+                /// A polling-based new block stream
                 pub type NewBlockWatcher<'a> = FilterWatcher<'a, H256>;
+                /// A polling-based pending transaction stream
                 pub type PendingTransactionWatcher<'a> = FilterWatcher<'a, TxHash>;
+                /// A polling-based log stream
                 pub type LogWatcher<'a> = FilterWatcher<'a, Log>;
 
                 // network-specific streams
-                pub type SubscriptionStream<'a, T> = GenericSubscriptionStream<'a, T, $network>;
-                pub type GenericNewBlockStream<'a> = SubscriptionStream<'a, Block<TxHash>>;
-                pub type GenericLogStream<'a> = SubscriptionStream<'a, Log>;
-                pub type GenericPendingTransactionStream<'a> = SubscriptionStream<'a, TxHash>;
-                pub type GenericSyncingStream<'a> = SubscriptionStream<'a, SyncData>;
+                type SubscriptionStream<'a, T> = GenericSubscriptionStream<'a, T, $network>;
+                /// A pubsub-based new block stream
+                pub type NewBlockStream<'a> = SubscriptionStream<'a, Block<TxHash>>;
+                /// A pubsub-based log stream
+                pub type LogStream<'a> = SubscriptionStream<'a, Log>;
+                /// A pubsub-based pending transaction stream
+                pub type PendingTransactionStream<'a> = SubscriptionStream<'a, TxHash>;
+                /// A pubsub-based sync state stream
+                pub type SyncingStream<'a> = SubscriptionStream<'a, SyncData>;
 
                 // network-specific transactions
+                /// A future representing a pending transaction
                 pub type PendingTransaction<'a> = GenericPendingTransaction<'a, $network>;
+                /// A future representing a pending transaction that bumps its
+                /// gas price over time
                 pub type EscalatingPending<'a> = GenericEscalatingPending<'a, $network>;
             }
 

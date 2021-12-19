@@ -17,6 +17,8 @@ pub use retrying::RetryingProvider;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ipc;
+#[cfg(not(target_arch = "wasm32"))]
+pub use ipc::Ipc;
 
 use ethers_core::{
     abi::ParamType,
@@ -359,7 +361,7 @@ where
     }
 
     /// Returns the EIP-1186 proof response
-    /// https://github.com/ethereum/EIPs/issues/1186
+    /// <https://github.com/ethereum/EIPs/issues/1186>
     async fn get_proof(
         &self,
         from: Address,
