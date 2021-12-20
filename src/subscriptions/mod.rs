@@ -14,10 +14,10 @@ use serde::de::DeserializeOwned;
 
 use crate::{
     error::RpcError,
-    watchers::filter_watcher::GenericTransactionStream,
     middleware::{Middleware, PubSubMiddleware},
     networks::Network,
     types::{Notification, SyncData},
+    watchers::filter_watcher::GenericTransactionStream,
 };
 
 pub type GenericNewBlockStream<'a, N> = GenericSubscriptionStream<'a, Block<TxHash>, N>;
@@ -126,8 +126,7 @@ where
 #[cfg(test)]
 #[cfg(not(target_arch = "wasm32"))]
 mod tests {
-    use super::*;
-    use crate::{Ethereum, EthereumMiddleware, Http, Ws};
+    use crate::{Http, Middleware, PubSubMiddleware, TransactionStream, Ws};
     use ethers_core::{
         types::{
             transaction::eip2718::TypedTransaction, Transaction, TransactionReceipt,
@@ -153,7 +152,8 @@ mod tests {
             .into();
 
         let mut sending = futures_util::future::join_all((0..num_txs).map(|_| async {
-            EthereumMiddleware::send_transaction(&provider, &tx.clone(), None)
+            provider
+                .send_transaction(&tx.clone(), None)
                 .await
                 .unwrap()
                 .await
@@ -162,18 +162,19 @@ mod tests {
         }))
         .fuse();
 
-        let mut watch_tx_stream = EthereumMiddleware::watch_new_pending_transactions(&provider)
+        let mut watch_tx_stream = provider
+            .watch_new_pending_transactions()
             .await
             .unwrap()
             .transactions_unordered(num_txs)
             .fuse();
 
-        let mut sub_tx_stream =
-            PubSubMiddleware::<Ethereum>::stream_new_pending_transactions(&ws_provider)
-                .await
-                .unwrap()
-                .transactions_unordered(2)
-                .fuse();
+        let mut sub_tx_stream = ws_provider
+            .stream_new_pending_transactions()
+            .await
+            .unwrap()
+            .transactions_unordered(2)
+            .fuse();
 
         let mut sent: Option<Vec<TransactionReceipt>> = None;
         let mut watch_received: Vec<Transaction> = Vec::with_capacity(num_txs);
@@ -217,7 +218,8 @@ mod tests {
             .into();
 
         let txs = futures_util::future::join_all((0..3).map(|_| async {
-            EthereumMiddleware::send_transaction(&provider, &tx.clone(), None)
+            provider
+                .send_transaction(&tx.clone(), None)
                 .await
                 .unwrap()
                 .await
@@ -225,7 +227,7 @@ mod tests {
         }))
         .await;
 
-        let stream = GenericTransactionStream::<_, Ethereum>::new(
+        let stream = TransactionStream::<'_, _>::new(
             &provider,
             stream::iter(txs.iter().cloned().map(|tx| tx.unwrap().transaction_hash)),
             10,

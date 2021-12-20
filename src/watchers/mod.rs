@@ -7,7 +7,7 @@ pub mod pending_transaction;
 pub use self::{
     filter_watcher::{
         GenericFilterWatcher, GenericLogWatcher, GenericNewBlockWatcher,
-        GenericPendingTransactionWatcher,
+        GenericPendingTransactionWatcher, GenericTransactionStream,
     },
     pending_escalator::GenericEscalatingPending,
     pending_transaction::GenericPendingTransaction,

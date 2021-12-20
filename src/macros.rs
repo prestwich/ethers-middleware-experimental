@@ -739,7 +739,7 @@ macro_rules! impl_network_middleware {
                 use crate::{
                     subscriptions::GenericSubscriptionStream,
                     types::SyncData,
-                    watchers::{GenericEscalatingPending, GenericFilterWatcher, GenericPendingTransaction},
+                    watchers::{GenericEscalatingPending, GenericFilterWatcher, GenericPendingTransaction, GenericTransactionStream},
                 };
                 use ethers_core::types::{Block, Log, TxHash, H256};
 
@@ -771,6 +771,9 @@ macro_rules! impl_network_middleware {
                 pub type PendingTransactionStream<'a> = SubscriptionStream<'a, TxHash>;
                 /// A pubsub-based sync state stream
                 pub type SyncingStream<'a> = SubscriptionStream<'a, SyncData>;
+
+                /// Drains a stream of transaction hashes and yields entire `Transaction`.
+                pub type TransactionStream<'a, T> = GenericTransactionStream<'a, T, Ethereum>;
 
                 // network-specific transactions
                 /// A future representing a pending transaction

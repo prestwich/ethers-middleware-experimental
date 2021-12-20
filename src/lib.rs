@@ -11,9 +11,7 @@ pub mod types;
 pub mod watchers;
 
 // We re-export the defaults
-pub use connections::{
-    Http, Ws, MockRpcConnection, QuorumProvider, RetryingProvider,
-};
+pub use connections::{Http, MockRpcConnection, QuorumProvider, RetryingProvider, Ws};
 
 #[cfg(not(target_arch = "wasm32"))]
 pub use connections::Ipc;
@@ -22,13 +20,14 @@ pub use error::RpcError;
 
 #[cfg(not(feature = "celo"))]
 pub use networks::ethereum::{
-    DefaultNetwork, Middleware, PubSubMiddleware, NewBlockWatcher, PendingTransactionWatcher, LogWatcher, NewBlockStream, LogStream, PendingTransactionStream, SyncingStream, PendingTransaction, EscalatingPending
+    DefaultNetwork, EscalatingPending, LogStream, LogWatcher, Middleware, NewBlockStream,
+    NewBlockWatcher, PendingTransaction, PendingTransactionStream, PendingTransactionWatcher,
+    PubSubMiddleware, SyncingStream, TransactionStream,
 };
 
 // feature-enabled support for dev-rpc methods
 #[cfg(feature = "dev-rpc")]
 pub use middleware::dev_rpc::DevRpcMiddleware;
-
 
 #[cfg(all(test, not(feature = "celo")))]
 mod test {
@@ -42,7 +41,6 @@ mod test {
         dbg!(&b);
     }
 }
-
 
 // TODO: REMOVE FROM HERE
 

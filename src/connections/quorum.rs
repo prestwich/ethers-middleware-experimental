@@ -451,7 +451,7 @@ impl QuorumStream {
 #[cfg(test)]
 #[cfg(not(target_arch = "wasm32"))]
 mod tests {
-    use crate::{EthereumMiddleware, MockRpcConnection};
+    use crate::{Middleware, MockRpcConnection};
 
     use super::{Quorum, QuorumProvider, WeightedProvider};
     use ethers_core::types::U64;
