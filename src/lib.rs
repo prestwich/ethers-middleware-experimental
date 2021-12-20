@@ -11,7 +11,9 @@ pub mod types;
 pub mod watchers;
 
 // We re-export the defaults
-pub use connections::{Http, MockRpcConnection, QuorumProvider, RetryingProvider, Ws};
+pub use connections::{
+    Http, MockRpcConnection, PubSubConnection, QuorumProvider, RetryingProvider, RpcConnection, Ws,
+};
 
 #[cfg(not(target_arch = "wasm32"))]
 pub use connections::Ipc;
