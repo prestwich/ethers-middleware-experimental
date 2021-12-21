@@ -16,6 +16,7 @@ fn null_params(value: &Value) -> bool {
     matches!(value, Value::Null)
 }
 
+/// The payload of a JSON-RPC request
 #[derive(Serialize, Debug, Clone, PartialEq)]
 pub struct RawRequest {
     method: &'static str,
@@ -29,7 +30,10 @@ impl RawRequest {
     where
         S: Serialize,
     {
-        Ok(RawRequest { method, params: serde_json::to_value(params)? })
+        Ok(RawRequest {
+            method,
+            params: serde_json::to_value(params)?,
+        })
     }
 
     /// Access the request method
@@ -48,27 +52,45 @@ impl RawRequest {
     }
 }
 
+/// A JSON-RPC error response
 #[derive(Deserialize, Debug, Clone, PartialEq)]
 pub struct JsonRpcError {
+    /// The error code
     pub code: i64,
+    /// The error message
     pub message: String,
+    /// Any error data
     pub data: Option<Value>,
 }
 
 impl fmt::Display for JsonRpcError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "(code: {}, message: {}, data: {:?})", self.code, self.message, self.data)
+        write!(
+            f,
+            "(code: {}, message: {}, data: {:?})",
+            self.code, self.message, self.data
+        )
     }
 }
 
+/// The raw response payload in a JSON-RPC response
 #[derive(Deserialize, Debug, Clone, PartialEq)]
 #[serde(untagged)]
 pub enum RawResponse {
-    Success { result: Value },
-    Error { error: JsonRpcError },
+    /// Success
+    Success {
+        /// The serialized result
+        result: Value,
+    },
+    /// Error
+    Error {
+        /// The error body
+        error: JsonRpcError,
+    },
 }
 
 impl RawResponse {
+    /// `true` if the response is an error
     pub fn is_error(&self) -> bool {
         use RawResponse::*;
         match &self {
@@ -77,10 +99,13 @@ impl RawResponse {
         }
     }
 
+    /// true if the response is not an error
     pub fn is_success(&self) -> bool {
         !self.is_error()
     }
 
+    /// Convert the response into a `Result` containing either the
+    /// succesful response value, or a json rpc error
     pub fn into_result(self) -> Result<Value, JsonRpcError> {
         match self {
             RawResponse::Success { result } => Ok(result),
@@ -88,6 +113,7 @@ impl RawResponse {
         }
     }
 
+    /// Attempt to deserialize the response to a specific type
     pub fn deserialize<R>(self) -> Result<R, RpcError>
     where
         R: DeserializeOwned,
@@ -99,6 +125,7 @@ impl RawResponse {
     }
 }
 
+/// A JSON-RPC Request
 #[derive(Serialize, Debug)]
 pub struct JsonRpcRequest {
     pub(crate) id: u64,
@@ -107,11 +134,13 @@ pub struct JsonRpcRequest {
     pub(crate) request: RawRequest,
 }
 
+/// A JSON-RPC Response
 #[derive(Deserialize, Debug)]
 pub struct JsonRpcResponse {
     pub(crate) id: u64,
     #[allow(dead_code)]
     jsonrpc: String,
+    /// The RPC call result
     #[serde(flatten)]
     pub result: RawResponse,
 }
@@ -121,12 +150,16 @@ pub struct JsonRpcResponse {
 pub struct JsonRpcNotification {
     jsonrpc: String,
     method: String,
+    /// The notification body
     pub params: Notification,
 }
 
+/// A subscription notification payload
 #[derive(Deserialize, Debug, Clone, Eq)]
 pub struct Notification {
+    /// The subscription ID
     pub subscription: U256,
+    /// The payload
     pub result: Value,
 }
 
@@ -144,38 +177,65 @@ impl std::hash::Hash for Notification {
     }
 }
 
+/// A helper trait for dispatching requests via an rpc connection and
+/// deserializing the response
 #[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 pub trait RequestParams: Serialize + Send + Sync + Debug {
+    /// The RPC method string for these params
     const METHOD: &'static str;
+
+    /// The response type for these params
     type Response: DeserializeOwned + std::fmt::Debug;
 
+    /// Convert the params to a raw request
     fn to_raw_request(&self) -> RawRequest {
         RawRequest::new(Self::METHOD, self).expect("value ser doesn't fail")
     }
 
+    /// Dispatch the request via a connection
     async fn send_via(&self, connection: &dyn RpcConnection) -> Result<Self::Response, RpcError> {
-        connection._request(self.to_raw_request()).await?.deserialize()
+        connection
+            ._request(self.to_raw_request())
+            .await?
+            .deserialize()
     }
 }
 
+/// Detailed syncing information returned by the syncing subscription
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct SyncDetails {
+    /// starting block
     pub starting_block: u64,
+    /// current block
     pub current_block: u64,
+    /// highest block
     pub highest_block: u64,
+    /// known states
     pub known_states: u64,
+    /// pulled states
     pub pulled_states: u64,
 }
 
+/// Possible notifications from the syncing subscription
 #[derive(Deserialize, Debug)]
 #[serde(untagged)]
 pub enum SyncData {
+    /// RawSyncing
     RawSyncing(bool),
+    /// RawStatus
     RawStatus(SyncDetails),
-    TaggedSyncing { syncing: bool },
-    TaggedStatus { status: SyncDetails },
+    /// TaggedSyncing
+    TaggedSyncing {
+        /// syncing status
+        syncing: bool,
+    },
+    /// TaggedStatus
+    TaggedStatus {
+        /// detailed status
+        status: SyncDetails,
+    },
 }
 
 pub(crate) type ResponseChannel = oneshot::Sender<Result<RawResponse, JsonRpcError>>;
@@ -185,7 +245,10 @@ pub(crate) type Subscription = mpsc::UnboundedSender<Notification>;
 #[derive(Debug)]
 pub(crate) enum Instruction {
     /// JSON-RPC request
-    Request { request: JsonRpcRequest, sender: ResponseChannel },
+    Request {
+        request: JsonRpcRequest,
+        sender: ResponseChannel,
+    },
     /// Create a new subscription
     Subscribe { id: U256, sink: Subscription },
     /// Cancel an existing subscription
@@ -195,23 +258,32 @@ pub(crate) enum Instruction {
 /// Node clients with potential client-specific behavior
 #[derive(Clone, Debug)]
 pub enum NodeClient {
+    /// Geth
     Geth,
+    /// Erigon
     Erigon,
+    /// OpenEthereum
     OpenEthereum,
+    /// Nethermind
     Nethermind,
+    /// Besu
     Besu,
+    /// Unknown user agent
     Unknown(String),
 }
 
 impl NodeClient {
+    /// Returns true if parity-style block receipts are used
     pub fn parity_block_receipts(&self) -> bool {
         matches!(self, NodeClient::OpenEthereum | NodeClient::Nethermind)
     }
 
+    /// Returns true if parity trace RPC is supported
     pub fn supports_trace(&self) -> bool {
         matches!(self, NodeClient::OpenEthereum | NodeClient::Nethermind)
     }
 
+    /// Returns true if geth-specific RPC is supported
     pub fn geth_like(&self) -> bool {
         matches!(self, NodeClient::Geth | NodeClient::Erigon)
     }
@@ -235,9 +307,12 @@ impl FromStr for NodeClient {
     }
 }
 
+/// Convenience type for working with EIP1559 fee information.
 #[derive(Debug, Copy, Clone, Default)]
 pub struct Eip1559Fees {
+    /// Max fee per gas (in wei)
     pub max_fee_per_gas: Option<U256>,
+    /// Max priority fee per gas (in wei)
     pub max_priority_fee_per_gas: Option<U256>,
 }
 
@@ -272,7 +347,10 @@ mod tests {
         let req = JsonRpcRequest {
             id: 300,
             jsonrpc: "2.0",
-            request: RawRequest { method: "method_name", params: serde_json::to_value(1).unwrap() },
+            request: RawRequest {
+                method: "method_name",
+                params: serde_json::to_value(1).unwrap(),
+            },
         };
         assert_eq!(
             &serde_json::to_string(&req).unwrap(),
