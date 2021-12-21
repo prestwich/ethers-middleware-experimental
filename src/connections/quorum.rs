@@ -70,6 +70,8 @@ impl<P> QuorumProvider<P> {
         QuorumProviderBuilder::default()
     }
 
+    /// Instantiate a quorum provider from a set of weighted providers
+    /// and a quorum policy
     pub fn new(quorum: Quorum, providers: impl IntoIterator<Item = WeightedProvider<P>>) -> Self {
         Self::builder()
             .add_providers(providers)
@@ -77,6 +79,7 @@ impl<P> QuorumProvider<P> {
             .build()
     }
 
+    /// Get a reference to the underlying weighted providers
     pub fn providers(&self) -> &[WeightedProvider<P>] {
         &self.providers
     }
@@ -86,6 +89,7 @@ impl<P> QuorumProvider<P> {
         self.quorum_weight
     }
 
+    /// Add a weighted provider to the underlying set
     pub fn add_provider(&mut self, provider: WeightedProvider<P>) {
         self.providers.push(provider);
         self.quorum_weight = self.quorum.weight(&self.providers)
@@ -383,6 +387,7 @@ impl<P> WeightedProvider<P> {
         Self::with_weight(inner, 1)
     }
 
+    /// Create a `WeightedProvider` with the specified weight
     pub fn with_weight(inner: P, weight: u64) -> Self {
         assert!(weight > 0);
         Self { inner, weight }

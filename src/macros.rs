@@ -431,7 +431,7 @@ macro_rules! impl_network_middleware {
                         .collect()
                 }
 
-                // /// Uninstall a block, log, or pending transaction filter on the RPC host
+                /// Uninstall a block, log, or pending transaction filter on the RPC host
                 async fn uninstall_filter(&self, id: ethers_core::types::U256) -> Result<bool, crate::error::RpcError> {
                     [<$network Middleware>]::as_base_middleware(self).uninstall_filter(id).await
                 }
@@ -673,6 +673,7 @@ macro_rules! impl_network_middleware {
                 }
             }
 
+            #[doc = "Middleware functionality for the " $network " network"]
             #[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
             #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
             pub trait [<$network PubSubMiddleware>]:

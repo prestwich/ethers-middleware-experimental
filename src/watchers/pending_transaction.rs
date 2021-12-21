@@ -1,3 +1,5 @@
+//! A pending transaction future
+
 use ethers_core::types::{Transaction, TransactionReceipt, TxHash, U64};
 use futures_core::stream::Stream;
 use futures_util::stream::StreamExt;

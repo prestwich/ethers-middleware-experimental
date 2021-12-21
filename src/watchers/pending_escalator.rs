@@ -1,3 +1,5 @@
+//! A pending transaction which bumps its gas price over time
+
 use ethers_core::types::{Bytes, TransactionReceipt, H256};
 use futures_util::{stream::FuturesUnordered, StreamExt};
 use pin_project::pin_project;
@@ -22,7 +24,7 @@ enum EscalatorStates<'a> {
 /// A GenericEscalatingPending is a pending transaction that increases its own
 /// gas price over time, by broadcasting successive versions with higher gas
 /// prices.
-#[must_use]
+#[must_use = "Futures do nothing unless polled"]
 #[pin_project(project = PendingProj)]
 #[derive(Debug)]
 pub struct GenericEscalatingPending<'a, N>

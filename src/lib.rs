@@ -53,6 +53,8 @@ mod test {
 
 // TODO: REMOVE FROM HERE
 
+/// A function which generates a gas price from an original price and a number
+/// of previous escalations
 pub type EscalationPolicy =
     Box<dyn Fn(ethers_core::types::U256, usize) -> ethers_core::types::U256 + Send + Sync>;
 

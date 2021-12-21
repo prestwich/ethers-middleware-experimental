@@ -1,3 +1,5 @@
+//! Filter-based polling watchers.
+
 use ethers_core::types::{Log, Transaction, TxHash, H256, U256};
 use futures_core::{stream::Stream, Future};
 use futures_util::{stream::FuturesUnordered, FutureExt, StreamExt};
@@ -23,8 +25,13 @@ enum GenericFilterWatcherState<'a, R> {
     NextItem(IntoIter<R>),
 }
 
+/// A new block watcher for some network
 pub type GenericNewBlockWatcher<'a, N> = GenericFilterWatcher<'a, H256, N>;
+
+/// A pending transaction watcher for some network
 pub type GenericPendingTransactionWatcher<'a, N> = GenericFilterWatcher<'a, TxHash, N>;
+
+/// A log watcher for some network
 pub type GenericLogWatcher<'a, N> = GenericFilterWatcher<'a, Log, N>;
 
 #[must_use = "filters do nothing unless you stream them"]
@@ -141,6 +148,7 @@ where
 /// Errors `GenericTransactionStream` can throw
 #[derive(Debug, thiserror::Error)]
 pub enum GetTransactionError {
+    /// An RPC Error
     #[error("Failed to get transaction `{0}`: {1}")]
     RpcError(TxHash, RpcError),
     /// `get_transaction` resulted in a `None`

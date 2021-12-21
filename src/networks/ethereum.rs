@@ -10,7 +10,8 @@ use crate::{
     types::Eip1559Fees,
 };
 
-#[derive(Debug)]
+/// The Ethereum network
+#[derive(Debug, Copy, Clone)]
 pub struct Ethereum;
 
 impl Network for Ethereum {
@@ -131,7 +132,9 @@ mod test {
     async fn it_makes_a_req() {
         use super::EthereumMiddleware;
         let provider: crate::connections::Http =
-            "https://mainnet.infura.io/v3/5cfdec76313b457cb696ff1b89cee7ee".parse().unwrap();
+            "https://mainnet.infura.io/v3/5cfdec76313b457cb696ff1b89cee7ee"
+                .parse()
+                .unwrap();
         dbg!(provider.get_block_number().await.unwrap());
     }
 }

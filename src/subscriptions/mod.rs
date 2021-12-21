@@ -20,11 +20,16 @@ use crate::{
     watchers::filter_watcher::GenericTransactionStream,
 };
 
+/// A new block stream for some network
 pub type GenericNewBlockStream<'a, N> = GenericSubscriptionStream<'a, Block<TxHash>, N>;
+/// A log stream for some network
 pub type GenericLogStream<'a, N> = GenericSubscriptionStream<'a, Log, N>;
+/// A pending transaction stream for some network
 pub type GenericPendingTransactionStream<'a, N> = GenericSubscriptionStream<'a, TxHash, N>;
+/// A syncing stream for some network
 pub type GenericSyncingStream<'a, N> = GenericSubscriptionStream<'a, SyncData, N>;
 
+/// A stream emitting the output of a subscription
 #[must_use = "subscriptions do nothing unless you stream them"]
 #[pin_project(PinnedDrop)]
 pub struct GenericSubscriptionStream<'a, R, N>
