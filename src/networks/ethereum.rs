@@ -100,16 +100,16 @@ impl TransactionRequest for TypedTransaction {
         TypedTransaction::data(self)
     }
 
+    fn set_data(&mut self, data: Bytes) {
+        TypedTransaction::set_data(self, data)
+    }
+
     fn access_list(&self) -> Option<&AccessList> {
         TypedTransaction::access_list(self)
     }
 
     fn set_access_list(&mut self, access_list: AccessList) {
         TypedTransaction::set_access_list(self, access_list)
-    }
-
-    fn set_data(&mut self, data: Bytes) {
-        TypedTransaction::set_data(self, data)
     }
 
     fn rlp_signed<T: Into<U64>>(&self, chain_id: T, signature: &Signature) -> Bytes {
