@@ -22,6 +22,38 @@ if_wasm! {
 
 use super::PubSubConnection;
 
+/// A provider that bundles multiple providers and only returns a value to the
+/// caller once the quorum has been reached.
+///
+/// # Example
+///
+/// Create a `QuorumProvider` that only returns a value if the `Quorum::Majority` of
+/// the weighted providers return the same value.
+///
+/// ```no_run
+/// use ethers_core::types::U64;
+/// use ethers_providers::{
+///     Http, QuorumProvider, Quorum, RpcConnection, WeightedProvider,
+/// };
+/// use std::str::FromStr;
+///
+/// # async fn foo() -> Result<(), Box<dyn std::error::Error>> {
+/// let provider1 = WeightedProvider::new(Http::from_str("http://localhost:8545")?);
+/// let provider2 = WeightedProvider::with_weight(Http::from_str("http://localhost:8545")?, 2);
+/// let provider3 = WeightedProvider::new(Http::from_str("http://localhost:8545")?);
+/// let provider = QuorumProvider::builder()
+///     .add_providers([provider1, provider2, provider3])
+///     .quorum(Quorum::Majority)
+///     .build();
+/// // the weight at which a quorum is reached,
+/// assert_eq!(provider.quorum_weight(), 4 / 2); // majority >=50%
+/// let block_number: U64 = provider.call_method("eth_blockNumber", ())
+///     .await?
+///     .deserialize()?;
+///
+/// # Ok(())
+/// # }
+/// ```
 #[derive(Debug, Clone)]
 pub struct QuorumProvider<P> {
     /// What kind of quorum is required

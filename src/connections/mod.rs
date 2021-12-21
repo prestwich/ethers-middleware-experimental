@@ -10,7 +10,7 @@ mod mock;
 pub use mock::MockRpcConnection;
 
 mod quorum;
-pub use quorum::QuorumProvider;
+pub use quorum::{Quorum, QuorumProvider, WeightedProvider};
 
 mod retrying;
 pub use retrying::RetryingProvider;
@@ -43,7 +43,10 @@ use crate::{
     },
     networks::{Network, Txn},
     rpc,
-    subscriptions::{GenericLogStream, GenericNewBlockStream, GenericPendingTransactionStream, GenericSyncingStream},
+    subscriptions::{
+        GenericLogStream, GenericNewBlockStream, GenericPendingTransactionStream,
+        GenericSyncingStream,
+    },
     types::{Eip1559Fees, NodeClient, Notification, RawRequest, RawResponse, RequestParams},
 };
 
@@ -70,11 +73,29 @@ async fn get_block_gen(
     }
 }
 
+/// An `RpcConnection` represents the transport that dispatches requests to a
+/// node and receives responses.
+///
+/// # Example
+///
+/// ```no_run
+/// use ethers_providers::{RpcConnection, Http};
+///
+/// # async fn foo() -> Result<(), Box<dyn std::error::Error>> {
+/// let provider: Http = "http://localhost:8545".parse()?;
+/// let block_number = provider.call_method("eth_blockNumber", ())
+///     .await?
+///     .deserialize()?;
+/// # Ok(())
+/// # }
+/// ```
 #[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 pub trait RpcConnection: Debug + Send + Sync {
+    /// Dispatch a request to the node
     async fn _request(&self, request: RawRequest) -> Result<RawResponse, RpcError>;
 
+    /// Convenience function for dispatching simple RPC requests
     async fn call_method<S>(&self, method: &'static str, params: S) -> Result<RawResponse, RpcError>
     where
         S: Serialize + Send + Sync,
@@ -84,6 +105,7 @@ pub trait RpcConnection: Debug + Send + Sync {
         self._request(request).await
     }
 
+    /// Convenience function for dispatching simple RPC requests
     async fn request<T>(&self, params: T) -> Result<T::Response, RpcError>
     where
         Self: Sized,
@@ -125,7 +147,10 @@ where
     }
 
     async fn node_client(&self) -> Result<NodeClient, RpcError> {
-        Ok(BaseMiddleware::<N>::client_version(self).await?.parse().expect("infallible parse"))
+        Ok(BaseMiddleware::<N>::client_version(self)
+            .await?
+            .parse()
+            .expect("infallible parse"))
     }
 
     async fn client_version(&self) -> Result<String, RpcError> {
@@ -215,7 +240,10 @@ where
         &self,
         block: BlockNumber,
     ) -> Result<Vec<TransactionReceipt>, RpcError> {
-        if BaseMiddleware::<N>::node_client(self).await?.parity_block_receipts() {
+        if BaseMiddleware::<N>::node_client(self)
+            .await?
+            .parity_block_receipts()
+        {
             rpc::dispatch_parity_get_block_receipts(self, &block.into()).await
         } else {
             rpc::dispatch_get_block_receipts(self, &block.into()).await
@@ -559,7 +587,11 @@ where
         }
 
         // estimate the gas without the access list
-        let gas = maybe(tx.gas().cloned(), BaseMiddleware::<N>::estimate_gas(self, tx)).await?;
+        let gas = maybe(
+            tx.gas().cloned(),
+            BaseMiddleware::<N>::estimate_gas(self, tx),
+        )
+        .await?;
         let mut al_used = false;
 
         // set the access lists

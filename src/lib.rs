@@ -1,4 +1,5 @@
 #![doc = include_str!("../README.md")]
+#![warn(missing_docs)]
 
 #[macro_use]
 pub mod macros;
@@ -14,7 +15,8 @@ pub mod watchers;
 
 // We re-export the defaults
 pub use connections::{
-    Http, MockRpcConnection, PubSubConnection, QuorumProvider, RetryingProvider, RpcConnection, Ws,
+    Http, MockRpcConnection, PubSubConnection, Quorum, QuorumProvider, RetryingProvider,
+    RpcConnection, WeightedProvider, Ws,
 };
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -23,10 +25,13 @@ pub use connections::Ipc;
 pub use error::RpcError;
 
 #[cfg(not(feature = "celo"))]
-pub use networks::ethereum::{
-    DefaultNetwork, EscalatingPending, LogStream, LogWatcher, Middleware, NewBlockStream,
-    NewBlockWatcher, PendingTransaction, PendingTransactionStream, PendingTransactionWatcher,
-    PubSubMiddleware, SyncingStream, TransactionStream,
+pub use networks::{
+    ethereum::{
+        DefaultNetwork, EscalatingPending, LogStream, LogWatcher, Middleware, NewBlockStream,
+        NewBlockWatcher, PendingTransaction, PendingTransactionStream, PendingTransactionWatcher,
+        PubSubMiddleware, SyncingStream, TransactionStream,
+    },
+    Network,
 };
 
 // feature-enabled support for dev-rpc methods

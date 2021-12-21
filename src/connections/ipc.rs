@@ -1,3 +1,5 @@
+//! An IPC connection to a local node
+
 use crate::{
     connections::{PubSubConnection, RpcConnection},
     error::{IpcError, RpcError},
@@ -69,7 +71,11 @@ impl RpcConnection for Ipc {
         let id = self.id.fetch_add(1, Ordering::SeqCst);
         let (sender, receiver) = oneshot::channel();
 
-        let request = JsonRpcRequest { id, jsonrpc: "2.0", request };
+        let request = JsonRpcRequest {
+            id,
+            jsonrpc: "2.0",
+            request,
+        };
 
         self.send(Instruction::Request { request, sender })?;
 
@@ -125,7 +131,7 @@ where
             loop {
                 let closed = self.tick(&mut read_buffer).await.expect("WS Server panic");
                 if closed && self.pending.is_empty() {
-                    break
+                    break;
                 }
             }
         };
@@ -162,11 +168,16 @@ where
         match msg {
             Instruction::Request { request, sender } => {
                 if self.pending.insert(request.id, sender).is_some() {
-                    warn!("Replacing a ResponseChannel request with id {:?}", request.id);
+                    warn!(
+                        "Replacing a ResponseChannel request with id {:?}",
+                        request.id
+                    );
                 }
 
-                if let Err(err) =
-                    self.socket_writer.write(serde_json::to_string(&request)?.as_bytes()).await
+                if let Err(err) = self
+                    .socket_writer
+                    .write(serde_json::to_string(&request)?.as_bytes())
+                    .await
                 {
                     error!("IPC connection error: {:?}", err);
                     self.pending.remove(&request.id);
@@ -179,7 +190,10 @@ where
             }
             Instruction::Unsubscribe { id } => {
                 if self.subscriptions.remove(&id).is_none() {
-                    warn!("Unsubscribing from non-existent subscription with id {:?}", id);
+                    warn!(
+                        "Unsubscribing from non-existent subscription with id {:?}",
+                        id
+                    );
                 }
             }
         };
@@ -273,12 +287,20 @@ mod test {
         let _geth = Geth::new().block_time(1u64).ipc_path(&path).spawn();
         let ipc = Ipc::connect(path).await.unwrap();
 
-        let block_num: U256 =
-            ipc.call_method("eth_blockNumber", ()).await.unwrap().deserialize().unwrap();
+        let block_num: U256 = ipc
+            .call_method("eth_blockNumber", ())
+            .await
+            .unwrap()
+            .deserialize()
+            .unwrap();
 
         std::thread::sleep(std::time::Duration::new(3, 0));
-        let block_num2: U256 =
-            ipc.call_method("eth_blockNumber", ()).await.unwrap().deserialize().unwrap();
+        let block_num2: U256 = ipc
+            .call_method("eth_blockNumber", ())
+            .await
+            .unwrap()
+            .deserialize()
+            .unwrap();
         assert!(block_num2 > block_num);
     }
 
@@ -289,8 +311,12 @@ mod test {
         let _geth = Geth::new().block_time(2u64).ipc_path(&path).spawn();
         let ipc = Ipc::connect(path).await.unwrap();
 
-        let sub_id: U256 =
-            ipc.call_method("eth_subscribe", ["newHeads"]).await.unwrap().deserialize().unwrap();
+        let sub_id: U256 = ipc
+            .call_method("eth_subscribe", ["newHeads"])
+            .await
+            .unwrap()
+            .deserialize()
+            .unwrap();
         let mut stream = ipc.install_listener(sub_id).unwrap();
 
         // Subscribing requires sending the sub call_method and then subscribing to
@@ -309,6 +335,13 @@ mod test {
             blocks.push(block.number.unwrap_or_default().as_u64());
         }
         let offset = blocks[0] - block_num;
-        assert_eq!(blocks, &[block_num + offset, block_num + offset + 1, block_num + offset + 2])
+        assert_eq!(
+            blocks,
+            &[
+                block_num + offset,
+                block_num + offset + 1,
+                block_num + offset + 2
+            ]
+        )
     }
 }

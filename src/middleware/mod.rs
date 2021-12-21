@@ -22,14 +22,19 @@ use crate::{
     connections::{PubSubConnection, RpcConnection},
     ens,
     error::RpcError,
+    networks::{Network, Txn},
+    subscriptions::{
+        GenericLogStream, GenericNewBlockStream, GenericPendingTransactionStream,
+        GenericSyncingStream,
+    },
+    types::NodeClient,
     watchers::{
+        filter_watcher::{
+            GenericLogWatcher, GenericNewBlockWatcher, GenericPendingTransactionWatcher,
+        },
         pending_escalator::GenericEscalatingPending,
         pending_transaction::GenericPendingTransaction,
-        filter_watcher::{GenericLogWatcher, GenericNewBlockWatcher, GenericPendingTransactionWatcher}
     },
-    networks::{Network, Txn},
-    subscriptions::{GenericLogStream, GenericNewBlockStream, GenericPendingTransactionStream, GenericSyncingStream},
-    types::NodeClient,
     EscalationPolicy,
 };
 
@@ -289,7 +294,7 @@ pub trait BaseMiddleware<N: Network>: Debug + Send + Sync {
             .collect()
     }
 
-    // /// Uninstall a block, log, or pending transaction filter on the RPC host
+    /// Uninstall a block, log, or pending transaction filter on the RPC host
     async fn uninstall_filter(&self, id: U256) -> Result<bool, RpcError> {
         self.inner_base().uninstall_filter(id).await
     }
@@ -646,7 +651,10 @@ pub trait Middleware<N: Network>:
     /// Send the raw RLP encoded transaction to the entire Ethereum network and
     /// returns the transaction's hash This will consume gas from the account
     /// that signed the transaction.
-    async fn send_raw_transaction(&self, tx: Bytes) -> Result<GenericPendingTransaction<'_, N>, RpcError> {
+    async fn send_raw_transaction(
+        &self,
+        tx: Bytes,
+    ) -> Result<GenericPendingTransaction<'_, N>, RpcError> {
         let this = Middleware::as_base_middleware(self);
         let hash = this.send_raw_transaction(tx).await?;
         Ok(GenericPendingTransaction::new(hash, this))
@@ -655,13 +663,19 @@ pub trait Middleware<N: Network>:
     /// Create a stream that repeatedly polls a log filter
     async fn watch_new_logs(&self, filter: &Filter) -> Result<GenericLogWatcher<N>, RpcError> {
         let this = Middleware::as_base_middleware(self);
-        Ok(GenericLogWatcher::new(this.new_log_filter(filter).await?, this))
+        Ok(GenericLogWatcher::new(
+            this.new_log_filter(filter).await?,
+            this,
+        ))
     }
 
     /// Create a stream that repeatedly polls a new block filter
     async fn watch_new_blocks(&self) -> Result<GenericNewBlockWatcher<N>, RpcError> {
         let this = Middleware::as_base_middleware(self);
-        Ok(GenericNewBlockWatcher::new(this.new_block_filter().await?, this))
+        Ok(GenericNewBlockWatcher::new(
+            this.new_block_filter().await?,
+            this,
+        ))
     }
 
     /// Create a stream that repeatedly polls a pending transaction filter

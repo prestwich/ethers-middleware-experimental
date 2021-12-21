@@ -11,6 +11,20 @@ use crate::{
     types::{JsonRpcRequest, JsonRpcResponse, RawRequest, RawResponse},
 };
 
+/// A low-level JSON-RPC Client over HTTP.
+///
+/// # Example
+///
+/// ```no_run
+/// use ethers_core::types::U64;
+/// use ethers_providers::{Http};
+/// use std::str::FromStr;
+///
+/// # async fn foo() -> Result<(), Box<dyn std::error::Error>> {
+/// let provider: Http = "http://localhost:8545".parse()?;
+/// # Ok(())
+/// # }
+/// ```
 #[derive(Debug)]
 pub struct Http {
     id: AtomicU64,
@@ -19,6 +33,17 @@ pub struct Http {
 }
 
 impl Http {
+    /// Initializes a new HTTP Client
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use ethers_providers::Http;
+    /// use url::Url;
+    ///
+    /// let url = Url::parse("http://localhost:8545").unwrap();
+    /// let provider = Http::new(url);
+    /// ```
     pub fn new(url: impl Into<Url>) -> Self {
         Self {
             id: AtomicU64::new(0),

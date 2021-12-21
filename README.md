@@ -18,7 +18,7 @@ use ethers_providers::{Http, Middleware};
 let provider: Http =
   "https://mainnet.infura.io/v3/c60b0bb42f8a4c6481ecd229eddaca27".parse()?;
 
-let block = provider.get_block(100u64).await?;
+let block = provider.get_block(100u64.into()).await?;
 println!("Got block: {}", serde_json::to_string(&block)?);
 
 let code = provider.get_code("0x89d24a6b4ccb1b6faa2625fe562bdd9a23260359".parse()?, None).await?;
@@ -51,7 +51,7 @@ and can be overriden by passing a registry address to the
 methods on the middleware.
 
 ```no_run
-# use ethers_providers::{Provider, Http, Middleware};
+# use ethers_providers::{Http, Middleware};
 # use std::convert::TryFrom;
 # async fn foo() -> Result<(), Box<dyn std::error::Error>> {
 # let provider: Http =
@@ -59,10 +59,10 @@ methods on the middleware.
 
 // Resolve ENS name to Address
 let name = "vitalik.eth";
-let address = provider.ens_resolve(name).await?;
+let address = provider.ens_resolve(None, name).await?;
 
 // Lookup ENS name given Address
-let resolved_name = provider.ens_lookup(address).await?;
+let resolved_name = provider.ens_lookup(None, address).await?;
 assert_eq!(name, resolved_name);
 
 # Ok(())
@@ -149,36 +149,80 @@ This ensures that delegation works properly and that your middleware can be used
 
 ```no_run
 // The generic versions
-use ethers_providers::middleware::{
-    BaseMiddleware,
-    GethMiddleware,
-    Middleware,
-    ParityMiddleware
+use ethers_providers::{
+    Network,
+    middleware::{
+      BaseMiddleware,
+      GethMiddleware,
+      Middleware,
+      ParityMiddleware,
+    },
 };
 
+# #[derive(Debug, Copy, Clone)]
 pub struct MyMiddleware;
 
 // We recommend implementing each of these.
 impl<N> BaseMiddleware<N> for MyMiddleware
 where
     N: Network
-{ /* ... */ }
+{
+    /* ... */
+#     fn inner_base(&self) -> &dyn BaseMiddleware<N> {
+#        self
+#    }
+#    fn provider(&self) -> &dyn ethers_providers::RpcConnection {
+#        unimplemented!()
+#    }
+}
 
 impl<N> GethMiddleware<N> for MyMiddleware
 where
     N: Network
-{ /* ... */ }
+{
+    /* ... */
+#    fn inner_geth(&self) -> &dyn GethMiddleware<N> {
+#        self
+#    }
+
+#    fn as_base_middleware(&self) -> &dyn BaseMiddleware<N> {
+#        self
+#    }
+}
 
 impl<N> ParityMiddleware<N> for MyMiddleware
 where
     N: Network
-{ /* ... */ }
+{
+    /* ... */
+#    fn inner_parity(&self) -> &dyn ParityMiddleware<N> {
+#        self
+#    }
+
+#    fn as_base_middleware(&self) -> &dyn BaseMiddleware<N> {
+#        self
+#    }
+}
 
 
 impl<N> Middleware<N> for MyMiddleware
 where
     N: Network
-{ /* ... */ }
+{
+    /* ... */
+#    fn inner(&self) -> &dyn Middleware<N> {
+#        self
+#    }
+#    fn as_base_middleware(&self) -> &dyn BaseMiddleware<N> {
+#        self
+#    }
+#    fn as_geth_middleware(&self) -> &dyn GethMiddleware<N> {
+#        self
+#    }
+#    fn as_parity_middleware(&self) -> &dyn ParityMiddleware<N> {
+#        self
+#    }
+}
 ```
 
 ## TODOS:
