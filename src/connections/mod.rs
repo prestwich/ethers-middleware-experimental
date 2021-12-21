@@ -41,7 +41,7 @@ use crate::{
     middleware::{
         maybe, BaseMiddleware, GethMiddleware, Middleware, ParityMiddleware, PubSubMiddleware,
     },
-    networks::{Network, Txn},
+    networks::{Network, TransactionRequest},
     rpc,
     subscriptions::{
         GenericLogStream, GenericNewBlockStream, GenericPendingTransactionStream,

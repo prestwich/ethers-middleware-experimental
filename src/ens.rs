@@ -5,7 +5,7 @@ use ethers_core::{
     utils::keccak256,
 };
 
-use crate::networks::{Network, Txn};
+use crate::networks::{Network, TransactionRequest};
 
 /// ENS registry address (`0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e`)
 /// Same on Rinkeby, Goerli, and Ropsten

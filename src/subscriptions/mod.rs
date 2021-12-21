@@ -70,7 +70,9 @@ where
     }
 
     /// Unsubscribes from the subscription.
-    pub async fn uninstall(&self) -> Result<(), RpcError> {
+    pub async fn uninstall(self) -> Result<(), RpcError> {
+        // TODO: join
+        self.provider.unsubscribe(self.id).await?;
         self.provider.pubsub_provider().uninstall_listener(self.id)
     }
 }

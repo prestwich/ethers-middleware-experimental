@@ -22,7 +22,7 @@ use crate::{
     connections::{PubSubConnection, RpcConnection},
     ens,
     error::RpcError,
-    networks::{Network, Txn},
+    networks::{Network, TransactionRequest},
     subscriptions::{
         GenericLogStream, GenericNewBlockStream, GenericPendingTransactionStream,
         GenericSyncingStream,
@@ -483,23 +483,29 @@ pub trait ParityMiddleware<N: Network>: BaseMiddleware<N> + Send + Sync {
     }
 }
 
+/// High-level middleware functions
 #[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 pub trait Middleware<N: Network>:
     BaseMiddleware<N> + GethMiddleware<N> + ParityMiddleware<N> + Send + Sync
 {
+    #[doc(hidden)]
     /// Return an inner middleware, if any
     fn inner(&self) -> &dyn Middleware<N>;
 
     /// Upcast the `Middleware` to a generic `BaseMiddleware`
+    #[doc(hidden)]
     fn as_base_middleware(&self) -> &dyn BaseMiddleware<N>;
 
     /// Upcast the `Middleware` to a `GethMiddleware`
+    #[doc(hidden)]
     fn as_geth_middleware(&self) -> &dyn GethMiddleware<N>;
 
     /// Upcast the `Middleware` to a `ParityMiddleware`
+    #[doc(hidden)]
     fn as_parity_middleware(&self) -> &dyn ParityMiddleware<N>;
 
+    /// Resolve an ENS name to an address
     async fn ens_resolve(
         &self,
         registry: Option<Address>,
@@ -508,6 +514,7 @@ pub trait Middleware<N: Network>:
         self.inner().ens_resolve(registry, ens_name).await
     }
 
+    /// Perform an ENS reverse-lookup on an address
     async fn ens_lookup(
         &self,
         registry: Option<Address>,
@@ -556,6 +563,7 @@ pub trait Middleware<N: Network>:
         Ok(decode_bytes(param, data))
     }
 
+    /// Estimate appropriate EIP-1559 fee parameters
     async fn estimate_eip1559_fees(
         &self,
         estimator: Option<fn(U256, Vec<Vec<U256>>) -> (U256, U256)>,
@@ -690,6 +698,7 @@ pub trait Middleware<N: Network>:
     }
 }
 
+/// Middleware with access to subscription features (e.g. via a Websocket)
 #[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 pub trait PubSubMiddleware<N: Network>: Middleware<N> + Send + Sync {
@@ -702,42 +711,51 @@ pub trait PubSubMiddleware<N: Network>: Middleware<N> + Send + Sync {
     #[doc(hidden)]
     fn as_middleware(&self) -> &dyn Middleware<N>;
 
+    #[doc(hidden)]
     async fn subscribe_new_heads(&self) -> Result<U256, RpcError> {
         self.inner_pubsub().subscribe_new_heads().await
     }
 
+    #[doc(hidden)]
     async fn subscribe_logs(&self, filter: &Filter) -> Result<U256, RpcError> {
         self.inner_pubsub().subscribe_logs(filter).await
     }
 
+    #[doc(hidden)]
     async fn subscribe_new_pending_transactions(&self) -> Result<U256, RpcError> {
         self.inner_pubsub()
             .subscribe_new_pending_transactions()
             .await
     }
 
+    #[doc(hidden)]
     async fn subscribe_syncing(&self) -> Result<U256, RpcError> {
         self.inner_pubsub().subscribe_syncing().await
     }
 
+    /// Stream new chain tips as the node learns of them
     async fn stream_new_heads(&self) -> Result<GenericNewBlockStream<N>, RpcError> {
         self.inner_pubsub().stream_new_heads().await
     }
 
+    /// Stream new logs matching a filter as the node learns of them
     async fn stream_logs(&self, filter: &Filter) -> Result<GenericLogStream<N>, RpcError> {
         self.inner_pubsub().stream_logs(filter).await
     }
 
+    /// Stream new pending transactions as the node sees them
     async fn stream_new_pending_transactions(
         &self,
     ) -> Result<GenericPendingTransactionStream<N>, RpcError> {
         self.inner_pubsub().stream_new_pending_transactions().await
     }
 
+    /// Stream the node's sync state over time
     async fn stream_syncing(&self) -> Result<GenericSyncingStream<N>, RpcError> {
         self.inner_pubsub().stream_syncing().await
     }
 
+    #[doc(hidden)]
     async fn unsubscribe(&self, subscription_id: U256) -> Result<bool, RpcError> {
         self.inner_pubsub().unsubscribe(subscription_id).await
     }

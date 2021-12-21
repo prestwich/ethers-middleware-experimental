@@ -6,7 +6,7 @@ use ethers_core::types::{
 use std::fmt::Debug;
 
 use crate::{
-    networks::{Network, Txn},
+    networks::{Network, TransactionRequest},
     types::Eip1559Fees,
 };
 
@@ -18,7 +18,7 @@ impl Network for Ethereum {
     type TransactionRequest = TypedTransaction;
 }
 
-impl Txn for TypedTransaction {
+impl TransactionRequest for TypedTransaction {
     fn recommend_1559(&self) -> bool {
         true
     }
