@@ -686,42 +686,51 @@ macro_rules! impl_network_middleware {
                 #[doc(hidden)]
                 fn as_pubsub_middleware(&self) -> &dyn crate::middleware::PubSubMiddleware<$network>;
 
+                #[doc(hidden)]
                 async fn subscribe_new_heads(&self) -> Result<ethers_core::types::U256, crate::error::RpcError> {
                     [<$network PubSubMiddleware>]::as_pubsub_middleware(self).subscribe_new_heads().await
                 }
 
+                #[doc(hidden)]
                 async fn subscribe_logs(&self, filter: &ethers_core::types::Filter) -> Result<ethers_core::types::U256, crate::error::RpcError> {
                     [<$network PubSubMiddleware>]::as_pubsub_middleware(self).subscribe_logs(filter).await
                 }
 
+                #[doc(hidden)]
                 async fn subscribe_new_pending_transactions(&self) -> Result<ethers_core::types::U256, crate::error::RpcError> {
                     [<$network PubSubMiddleware>]::as_pubsub_middleware(self)
                         .subscribe_new_pending_transactions()
                         .await
                 }
 
+                #[doc(hidden)]
                 async fn subscribe_syncing(&self) -> Result<ethers_core::types::U256, crate::error::RpcError> {
                     [<$network PubSubMiddleware>]::as_pubsub_middleware(self).subscribe_syncing().await
                 }
 
+                /// Stream new chain tips as the node learns of them
                 async fn stream_new_heads(&self) -> Result<crate::subscriptions::GenericNewBlockStream<$network>, crate::error::RpcError> {
                     [<$network PubSubMiddleware>]::as_pubsub_middleware(self).stream_new_heads().await
                 }
 
+                /// Stream new logs matching a filter as the node learns of them
                 async fn stream_logs(&self, filter: &ethers_core::types::Filter) -> Result<crate::subscriptions::GenericLogStream<$network>, crate::error::RpcError> {
                     [<$network PubSubMiddleware>]::as_pubsub_middleware(self).stream_logs(filter).await
                 }
 
+                /// Stream new pending transactions as the node sees them
                 async fn stream_new_pending_transactions(
                     &self,
                 ) -> Result<crate::subscriptions::GenericPendingTransactionStream<$network>, crate::error::RpcError> {
                     [<$network PubSubMiddleware>]::as_pubsub_middleware(self).stream_new_pending_transactions().await
                 }
 
+                /// Stream the node's sync state over time
                 async fn stream_syncing(&self) -> Result<crate::subscriptions::GenericSyncingStream<$network>, crate::error::RpcError> {
                     [<$network PubSubMiddleware>]::as_pubsub_middleware(self).stream_syncing().await
                 }
 
+                #[doc(hidden)]
                 async fn unsubscribe(&self, subscription_id: ethers_core::types::U256) -> Result<bool, crate::error::RpcError> {
                     [<$network PubSubMiddleware>]::as_pubsub_middleware(self).unsubscribe(subscription_id).await
                 }

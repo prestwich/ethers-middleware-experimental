@@ -77,6 +77,9 @@ pub trait TransactionRequest: Default + serde::Serialize + Debug + Clone + Send 
     fn sighash<T: Into<U64>>(&self, chain_id: T) -> H256;
 }
 
+/// A network with its associated Request/Response types
 pub trait Network: Send + Sync + Debug {
+    /// The params for `eth_sendTransaction`, `eth_call`, `eth_estimateGas` and
+    /// `eth_createAccessList`
     type TransactionRequest: TransactionRequest;
 }
