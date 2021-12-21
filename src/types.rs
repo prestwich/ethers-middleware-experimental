@@ -146,7 +146,7 @@ pub struct JsonRpcResponse {
 }
 
 #[derive(Deserialize, Debug, PartialEq, Clone)]
-/// A JSON-RPC Notifcation
+/// A JSON-RPC Notification
 pub struct JsonRpcNotification {
     jsonrpc: String,
     method: String,
@@ -169,7 +169,7 @@ impl PartialEq<Notification> for Notification {
     }
 }
 
-// for convience in quorum provider
+// for convenience in quorum provider
 impl std::hash::Hash for Notification {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.subscription.hash(state);
@@ -302,7 +302,7 @@ impl FromStr for NodeClient {
                 "besu" => Ok(NodeClient::Besu),
                 _ => Ok(NodeClient::Unknown(name)),
             },
-            None => Ok(NodeClient::Unknown("".to_owned())),
+            None => Ok(NodeClient::Unknown(s.to_string())),
         }
     }
 }

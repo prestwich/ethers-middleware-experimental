@@ -1,4 +1,4 @@
-use crate::{error::RpcError, types::RawRequest, Network};
+use crate::{error::RpcError, networks::Network, types::RawRequest};
 
 /// A middleware supporting development-specific JSON RPC methods
 ///
